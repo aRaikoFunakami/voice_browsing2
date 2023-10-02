@@ -6,17 +6,45 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import time
 
+'''
 def find_search_input_field(html):
 	soup = BeautifulSoup(html, 'html.parser')
-	input_fields = soup.find_all(['input', 'textarea'])
-	#print(input_fields)
+	input_fields = soup.find_all(['textarea',])
 	for field in input_fields:
-		#print(field)
-		#if field.get('type') == 'text' or field.name == 'textarea':
-		#   if 'search' in str(field).lower() or 'query' in str(field).lower():
+		print(field.get('id'), field.get('name'), field.name)
+		if field.get('id') is None and field.get('name') is None:
+			break
 		return field.get('id') or field.get('name'), field.name
-	return None, None
 
+	input_fields = soup.find_all(['input',])
+	for field in input_fields:
+		print(field.get('id'), field.get('name'), field.name)
+		if field.get('id') is None and field.get('name') is None:
+			break
+		return field.get('id') or field.get('name'), field.name
+
+	return None, None
+'''
+def find_first_field_with_id_or_name(fields):
+    """指定された fields から最初に見つかる field の id または name と field name を返す。"""
+    for field in fields:
+        print(field.get('id'), field.get('name'), field.name)  # デバッグ用
+
+        # id も name も None なら次のループへ
+        if field.get('id') is None and field.get('name') is None:
+            continue
+
+        return field.get('id') or field.get('name'), field.name
+    return None, None
+
+def find_search_input_field(html):
+    """指定された HTML から検索用の input フィールドまたは textarea の id または name を探す。"""
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # 'input' と 'textarea' タグを一度に検索
+    input_fields = soup.find_all(['input', 'textarea'])
+
+    return find_first_field_with_id_or_name(input_fields)
 
 driver = webdriver.Chrome()
 
