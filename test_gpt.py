@@ -139,39 +139,76 @@ driver = webdriver.Chrome()
 """
 動画選択補助用の番号をつける処理
 """
-def add_numbers_to_videos_for_youtube(driver):
-	WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, f"video-title")))
-	video_elements = driver.find_elements(By.ID, 'video-title')
+# JavaScriptで半透明な丸と番号を作成
+script_add_numbers_template = """
+var circle = document.createElement('div');
+circle.className = "video-number-circle"; 
+var text = document.createElement('span');
+circle.style.zIndex = "9999";
+circle.style.fontSize = "36px"; 
+circle.style.width = '60px';
+circle.style.height = '60px';
+circle.style.lineHeight = "48px";
+circle.style.background = 'rgba(0, 128, 0, 0.5)';
+circle.style.position = 'absolute';
+circle.style.top = '{y}px';
+circle.style.left = '{x}px';
+circle.style.borderRadius = '50%';
+circle.style.display = 'flex';
+circle.style.justifyContent = 'center';
+circle.style.alignItems = 'center';
+text.innerHTML = '{i}';
+text.style.color = 'white';
+circle.appendChild(text);
+document.body.appendChild(circle);
+"""
 
-	for i, video in enumerate(video_elements):
-		x, y = video.location['x'], video.location['y']
-		# JavaScriptで半透明な丸と番号を作成
-		script = f"""
-		var circle = document.createElement('div');
-		circle.className = "video-number-circle"; 
-		var text = document.createElement('span');
-		circle.style.zIndex = "9999";
-		circle.style.fontSize = "36px"; 
-		circle.style.width = '60px';
-		circle.style.height = '60px';
-		circle.style.lineHeight = "48px";
-		circle.style.background = 'rgba(0, 128, 0, 0.5)';
-		circle.style.position = 'absolute';
-		circle.style.top = '{y}px';
-		circle.style.left = '{x-60}px';
-		circle.style.borderRadius = '50%';
-		circle.style.display = 'flex';
-		circle.style.justifyContent = 'center';
-		circle.style.alignItems = 'center';
-		text.innerHTML = '{i}';
-		text.style.color = 'white';
-		circle.appendChild(text);
-		document.body.appendChild(circle);
-		"""
-		driver.execute_script(script, video)
+def add_numbers_to_videos_for_youtube(driver):
+	try:
+		WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, f"video-title")))
+		video_elements = driver.find_elements(By.ID, 'video-title')
+
+		for i, video in enumerate(video_elements):
+			x, y = video.location['x'], video.location['y']
+			script = script_add_numbers_template.format(x=x-60, y=y, i=i)
+			driver.execute_script(script, video)
+	except TimeoutException:
+		print("Timed out waiting for input or textarea elements to load.")
+		return "videos are not found"
+	return "videos are found"
+
+def add_numbers_to_videos_for_danime(driver):
+	try:
+		WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, f"a.textContainer")))
+		#video_elements = driver.find_elements(By.CSS_SELECTOR, f"a.textContainer")
+	
+		# <a>要素のリストを取得
+		a_elements = driver.find_elements(By.TAG_NAME, 'a')
+
+		# 条件に一致する<a>要素を取得
+		matching_elements = {}
+		for a_element in a_elements:
+			href = a_element.get_attribute('href')
+			if href.startswith("https://animestore.docomo.ne.jp/animestore/") and "workId=" in href:
+				if href not in matching_elements:
+					matching_elements[href] = a_element
+		
+		video_elements = list(matching_elements.values())
+		print(f"video: {video_elements}")
+
+		for i, video in enumerate(video_elements):
+			x, y = video.location['x'], video.location['y']
+			script = script_add_numbers_template.format(x=x-60, y=y, i=i)
+			driver.execute_script(script, video)
+	except TimeoutException:
+		print("Timed out waiting for input or textarea elements to load.")
+		return "videos are not found"
+	return "videos are found"
+
 
 def add_numbers_to_videos(driver):
 	url = driver.current_url
+	print(f"url: {url} in add_numbers_to_videos")
 	if "google.com" in url:
 		return 
 	if "youtube.com" in url:
@@ -179,24 +216,15 @@ def add_numbers_to_videos(driver):
 	if "hulu.jp" in url:
 		return 
 	if "animestore.docomo.ne.jp" in url:
-		return 
+		return add_numbers_to_videos_for_danime(driver)
 	if "amazon.co.jp" in url:
-		return 
+		return #add_numbers_to_videos_for_primevideo(driver)
 	if "yahoo.co.jp" in url:
 		return 
 
-# 画面遷移前に番号を消すスクリプトを注入
-def setup_remove_numbers_on_navigation(driver):
-	script = '''
-	window.addEventListener('beforeunload', function() {
-		var circles = document.querySelectorAll('.video-number-circle');
-		circles.forEach(function(circle) {
-			circle.parentNode.removeChild(circle);
-		});
-	});
-	'''
-	driver.execute_script(script)
-
+"""
+動画選択補助用の番号を削除
+"""
 def remove_numbers_from_videos(driver):
 	script = '''
 	var circles = document.querySelectorAll('.video-number-circle');
@@ -244,18 +272,9 @@ def find_search_input_field(url):
 def search_by_query(url, input):
 	global driver
 	driver.get(f"{url}{quote(input)}")
+	time.sleep(1)
+	return add_numbers_to_videos(driver)
 
-	# 動画のリンクを取得（例として最初の動画）
-	try:
-		WebDriverWait(driver, 10).until(
-			EC.presence_of_element_located((By.ID, f"video-title"))
-		)
-		add_numbers_to_videos(driver)
-	except TimeoutException:
-		print("Timed out waiting for input or textarea elements to load.")
-		return f"{input} video was no found."
-
-	return f"{input} video was found."
 
 
 def search_by_input_field(input, url):
@@ -314,7 +333,7 @@ def search_by_input_field(input, url):
 	return ""
 
 
-def select_video_by_number(num):
+def select_video_by_number_for_youtube(num):
 	global driver
 
 	try:
@@ -341,6 +360,59 @@ def select_video_by_number(num):
 		return f"Playback of the selected video has not started."
 
 	return f"Playback of the selected video has started."
+
+def select_video_by_numbers_for_danime(num):
+	global driver
+
+	try:
+		a_element = WebDriverWait(driver, 10).until(
+			EC.presence_of_element_located((By.TAG_NAME, "a"))
+		)
+		a_elements = driver.find_elements(By.TAG_NAME, 'a')
+
+		# 条件に一致する<a>要素を取得
+		# 同じURLが存在する場合は最初のものを採用
+		matching_elements = {}
+		for a_element in a_elements:
+			href = a_element.get_attribute('href')
+			if href.startswith("https://animestore.docomo.ne.jp/animestore/") and "workId=" in href:
+				if href not in matching_elements:
+					matching_elements[href] = a_element
+
+		videos = list(matching_elements.values())
+
+		# 表示しているリンク番号を削除
+		remove_numbers_from_videos(driver)
+		# 選択したビデオをクリック
+		driver.execute_script("arguments[0].scrollIntoView();", videos[num])
+		driver.execute_script("arguments[0].click();", videos[num])
+		# クリック先でリンク番号を追加
+		time.sleep(1) # 非同期処理のため WebDriverWait では正常に動作しない場合があるので sleep する
+		add_numbers_to_videos(driver)
+	except Exception as e:
+		print(f"An error occurred: {e}")
+		return f"Playback of the selected video has not started."
+
+	return f"Playback of the selected video has started."
+
+
+def select_video_by_number(num):
+	global driver
+	url = driver.current_url
+	print(f"url: {url} in select_video_by_number")
+	if "google.com" in url:
+		return 
+	if "youtube.com" in url:
+		return select_video_by_number_for_youtube(num)
+	if "hulu.jp" in url:
+		return 
+	if "animestore.docomo.ne.jp" in url:
+		return select_video_by_numbers_for_danime(num)
+	if "amazon.co.jp" in url:
+		return #select_video_by_number_for_primevideo(driver)
+	if "yahoo.co.jp" in url:
+		return 
+ 
 
 while True:
 	user_input = input("Enter the text to search (or 'exit' to quit): ")
