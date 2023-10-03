@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 .gitignore
 config.py
+settings.json
+

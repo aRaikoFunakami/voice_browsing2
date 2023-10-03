@@ -64,9 +64,7 @@ class SearchByInputField(BaseTool):
 	def _run(self, input: str, url: str):
 		logging.info(f"search_by_input_field")
 		print(f"_run(): input = {input}, url = {url}")
-		response = search_by_input_field(input, url)
-		print(f"response: {response}")
-		return response
+		return search_by_input_field(input, url)
 
 	def _arun(self, ticker: str):
 		raise NotImplementedError("not support async")
@@ -139,7 +137,7 @@ driver = webdriver.Chrome()
 """
 動画選択補助用の番号をつける処理
 """
-def add_numbers_to_videos_for_youtube(driver):
+def add_numbers_to_videos_for_youtube():
 	WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, f"video-title")))
 	video_elements = driver.find_elements(By.ID, 'video-title')
 
@@ -170,12 +168,13 @@ def add_numbers_to_videos_for_youtube(driver):
 		"""
 		driver.execute_script(script, video)
 
+
 def add_numbers_to_videos(driver):
 	url = driver.current_url
 	if "google.com" in url:
 		return 
 	if "youtube.com" in url:
-		return add_numbers_to_videos_for_youtube(driver)
+		return add_numbers_to_videos_for_youtube()
 	if "hulu.jp" in url:
 		return 
 	if "animestore.docomo.ne.jp" in url:
@@ -184,6 +183,8 @@ def add_numbers_to_videos(driver):
 		return 
 	if "yahoo.co.jp" in url:
 		return 
+
+
 
 # 画面遷移前に番号を消すスクリプトを注入
 def setup_remove_numbers_on_navigation(driver):
@@ -244,18 +245,9 @@ def find_search_input_field(url):
 def search_by_query(url, input):
 	global driver
 	driver.get(f"{url}{quote(input)}")
+ 
+	return add_numbers_to_videos(driver)
 
-	# 動画のリンクを取得（例として最初の動画）
-	try:
-		WebDriverWait(driver, 10).until(
-			EC.presence_of_element_located((By.ID, f"video-title"))
-		)
-		add_numbers_to_videos(driver)
-	except TimeoutException:
-		print("Timed out waiting for input or textarea elements to load.")
-		return f"{input} video was no found."
-
-	return f"{input} video was found."
 
 
 def search_by_input_field(input, url):
@@ -316,7 +308,7 @@ def search_by_input_field(input, url):
 
 def select_video_by_number(num):
 	global driver
-
+	
 	try:
 		# 動画のリンクを取得（例として最初の動画）
 		WebDriverWait(driver, 10).until(
@@ -338,9 +330,6 @@ def select_video_by_number(num):
 		add_numbers_to_videos(driver)
 	except Exception as e:
 		print(f"An error occurred: {e}")
-		return f"Playback of the selected video has not started."
-
-	return f"Playback of the selected video has started."
 
 while True:
 	user_input = input("Enter the text to search (or 'exit' to quit): ")
