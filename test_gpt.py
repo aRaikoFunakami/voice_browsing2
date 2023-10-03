@@ -28,21 +28,21 @@ import config
 config.load()
 
 
-# 動画を選択する
-class SelectLinkInput(BaseModel):
-	num: int = Field(descption="Select a link to the web page you are viewing")
+# 動画を番号で選択する
+class SelectVideoByNumberInput(BaseModel):
+	num: int = Field(descption="Select the video you want to play by number")
 	#url: str = Field(descption="url of the web page")
 
 
-class SelectLink(BaseTool):
-	name = "select_link"
-	description = "Use this function to select a link on the web page you are viewing"
-	args_schema: Type[BaseModel] = SelectLinkInput
+class SelectVideoByNumber(BaseTool):
+	name = "select_video_by_number"
+	description = "Use this function to select the video you want to play by number"
+	args_schema: Type[BaseModel] = SelectVideoByNumberInput
 
 	def _run(self, num: int):
-		logging.info(f"select_link")
+		logging.info(f"select_video_by_number")
 		print(f"_run(): input = {num},")
-		return select_link(num=num)
+		return select_video_by_number(num=num)
 
 	def _arun(self, ticker: str):
 		raise NotImplementedError("not support async")
@@ -72,7 +72,7 @@ class SearchByInputField(BaseTool):
 
 tools = [
 	SearchByInputField(),
-	SelectLink(),
+	SelectVideoByNumber(),
 ]
 
 
@@ -92,6 +92,8 @@ def OpenAIFunctionsAgent(tools=None, llm=None, verbose=False):
 
 		# Restrictions
 		- Preference for Japanese language sites
+		- If the website to search for videos is not already specified, youtube is assumed to be specified.
+		- No automatic video selection unless explicitly specified
 
 		# Combination of web sites and URLs to search
 		{
@@ -227,10 +229,14 @@ def search_by_query(url, input):
 	driver.get(f"{url}{quote(input)}")
 
 	# 動画のリンクを取得（例として最初の動画）
-	WebDriverWait(driver, 10).until(
-		EC.presence_of_element_located((By.ID, f"video-title"))
-	)
-	add_numbers_to_videos(driver)
+	try:
+		WebDriverWait(driver, 10).until(
+			EC.presence_of_element_located((By.ID, f"video-title"))
+		)
+		add_numbers_to_videos(driver)
+	except TimeoutException:
+		print("Timed out waiting for input or textarea elements to load.")
+		return f"{input}の動画が見つかりませんでした"
 	return f"{input}の動画が見つかりました"
 
 
@@ -290,7 +296,7 @@ def search_by_input_field(input, url):
 	return ""
 
 
-def select_link(num):
+def select_video_by_number(num):
 	global driver
 	
 	try:
@@ -300,14 +306,17 @@ def select_link(num):
 		)
 		videos = driver.find_elements(By.ID, 'video-title')
 
-		#画面表示されていないと落ちる
+		#画面表示されていないと落ちるので click() を直接呼び出さない
 		#videos[num].click()
-		current_url = driver.current_url
+		#
+		# 表示しているリンク番号を削除
 		remove_numbers_from_videos(driver)
+		# 選択したビデオをクリック
 		driver.execute_script("arguments[0].scrollIntoView();", videos[num])
 		driver.execute_script("arguments[0].click();", videos[num])
+		# クリック先でリンク番号を追加
+		# 非同期処理のため WebDriverWait では正常に動作しない
 		time.sleep(2)
-		WebDriverWait(driver, 10).until(lambda x: x.current_url != current_url)
 		add_numbers_to_videos(driver)
 	except Exception as e:
 		print(f"An error occurred: {e}")
