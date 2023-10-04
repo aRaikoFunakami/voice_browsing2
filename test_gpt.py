@@ -139,14 +139,11 @@ import time
 
 
 logging.basicConfig(format='%(filename)s: %(levelname)s: %(funcName)s: %(message)s', level=logging.INFO)
-
 driver = webdriver.Chrome()
 
 """
 Remove numbers for video selection aids
 """
-
-
 def remove_numbers_from_videos(driver):
 	script = """
 	var circles = document.querySelectorAll('.video-number-circle');
@@ -228,15 +225,7 @@ def add_numbers_to_videos_common(driver, locator, condition_func, script_templat
 
 	return "The search was successful."
 
-"""
-		return add_numbers_to_videos_common(
-			driver,
-			(By.TAG_NAME, "a"),
-			lambda href: href.startswith("https://animestore.docomo.ne.jp/animestore/")
-			and "workId=" in href,
-			script_add_numbers_template,
-		)
-"""
+
 def add_numbers_to_videos(driver):
 	url = driver.current_url
 	logging.info(f"url: {url}")
@@ -343,14 +332,6 @@ def select_video_common(num, locator, condition_func):
 
 	return f"Playback of the selected video has started."
 
-"""
-		return select_video_common(
-			num,
-			(By.TAG_NAME, "a"),
-			lambda href: href.startswith("https://animestore.docomo.ne.jp/animestore/")
-			and "workId=" in href,
-		)
-"""	
 
 def select_link_by_number(num):
 	global driver
