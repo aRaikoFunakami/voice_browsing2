@@ -97,7 +97,8 @@ def OpenAIFunctionsAgent(tools=None, llm=None, verbose=False):
 		- Preference for Japanese language sites
 		- If the website to search for videos is not already specified, youtube is assumed to be specified.
 		- Use the function to select links by number if only numbers are entered.
-		- If you don't know, say you don't know.
+  		- If you don't know, say you don't know.
+		- Do not lie.
 		- Minimal talk, no superfluous words.
 
 		# Combination of web sites and URLs to search
@@ -197,7 +198,7 @@ def add_numbers_to_videos_for_youtube(driver):
 		logging.error("Timed out waiting for input or textarea elements to load.")
 		return "videos are not found"
 
-	return "The search was successful."
+	return "The search was successful. Please ask Human to select links."
 
 
 def add_numbers_to_videos_common(driver, locator, condition_func, script_template):
@@ -223,7 +224,7 @@ def add_numbers_to_videos_common(driver, locator, condition_func, script_templat
 		logging.error("Timed out waiting for input or textarea elements to load.")
 		return "videos are not found"
 
-	return "The search was successful."
+	return "The search was successful. Please ask Human to select links."
 
 
 def add_numbers_to_videos(driver):
@@ -272,6 +273,17 @@ def search_by_query(url, input):
 """
 Select the link (video) of the selected number
 """
+def click_link(link):
+	logging.info(f"link = {link}")
+	# 画面表示されていないと落ちるので click() を直接呼び出さない
+	# videos[num].click()
+	#
+	# 表示しているリンク番号を削除
+	remove_numbers_from_videos(driver)
+	# 選択したビデオをクリック
+	driver.execute_script("arguments[0].scrollIntoView();", link)
+	driver.execute_script("arguments[0].click();", link)
+
 def select_video_youtube(num):
 	logging.info(f"num = {num}")
 	global driver
@@ -282,15 +294,7 @@ def select_video_youtube(num):
 			EC.presence_of_element_located((By.ID, f"video-title"))
 		)
 		videos = driver.find_elements(By.ID, "video-title")
-
-		# 画面表示されていないと落ちるので click() を直接呼び出さない
-		# videos[num].click()
-		#
-		# 表示しているリンク番号を削除
-		remove_numbers_from_videos(driver)
-		# 選択したビデオをクリック
-		driver.execute_script("arguments[0].scrollIntoView();", videos[num])
-		driver.execute_script("arguments[0].click();", videos[num])
+		click_link(videos[num])
 		# クリック先でリンク番号を追加
 		# 非同期処理のため WebDriverWait では正常に動作しない
 		time.sleep(2)
@@ -317,13 +321,7 @@ def select_video_common(num, locator, condition_func):
 					matching_elements[href] = element
 
 		videos = list(matching_elements.values())
-
-		# 表示しているリンク番号を削除
-		remove_numbers_from_videos(driver)
-		# 選択したビデオをクリック
-		driver.execute_script("arguments[0].scrollIntoView();", videos[num])
-		driver.execute_script("arguments[0].click();", videos[num])
-		# クリック先でリンク番号を追加
+		click_link(videos[num])
 		time.sleep(1)
 		add_numbers_to_videos(driver)
 	except Exception as e:
