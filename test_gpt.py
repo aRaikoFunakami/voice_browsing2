@@ -29,43 +29,44 @@ config.load()
 
 
 # 動画を番号で選択する
-class SelectVideoByNumberInput(BaseModel):
-	num: int = Field(descption="Select the video you want to play by number")
-	#url: str = Field(descption="url of the web page")
+class SelectLinkByNumberInput(BaseModel):
+	num: int = Field(descption="Select the link you want to select by number")
+	# url: str = Field(descption="url of the web page")
 
 
-class SelectVideoByNumber(BaseTool):
-	name = "select_video_by_number"
-	description = "Use this function to select the video you want to play by number"
-	args_schema: Type[BaseModel] = SelectVideoByNumberInput
+class SelectLinkByNumber(BaseTool):
+	name = "select_link_by_number"
+	description = "Use this function to select the link you want to select by number"
+	args_schema: Type[BaseModel] = SelectLinkByNumberInput
 
 	def _run(self, num: int):
-		logging.info(f"select_video_by_number")
-		print(f"_run(): input = {num},")
-		return select_video_by_number(num=num)
+		logging.info(f"num = {num}")
+		response = select_link_by_number(num=num)
+		logging.info(f"response: {response}")
+		return response
 
 	def _arun(self, ticker: str):
 		raise NotImplementedError("not support async")
 
 
 # キーワードでWebサイトから動画を検索する
-class SearchByInputFieldInput(BaseModel):
+class SearchByQueryInput(BaseModel):
+	url: str = Field(descption="url of the web page")
 	input: str = Field(
 		descption="String to be searched in the text field of the web page"
 	)
-	url: str = Field(descption="url of the web page")
 
 
-class SearchByInputField(BaseTool):
-	name = "search_by_input_field"
+
+class SearchByQuery(BaseTool):
+	name = "search_by_query"
 	description = "You use this function when you want to search in the text field of a Web page. "
-	args_schema: Type[BaseModel] = SearchByInputFieldInput
+	args_schema: Type[BaseModel] = SearchByQueryInput
 
-	def _run(self, input: str, url: str):
-		logging.info(f"search_by_input_field")
-		print(f"_run(): input = {input}, url = {url}")
-		response = search_by_input_field(input, url)
-		print(f"response: {response}")
+	def _run(self, url: str, input: str):
+		logging.info(f" url = {url}, input = {input}")
+		response = search_by_query(url=url, input=input)
+		logging.info(f"response: {response}")
 		return response
 
 	def _arun(self, ticker: str):
@@ -73,8 +74,8 @@ class SearchByInputField(BaseTool):
 
 
 tools = [
-	SearchByInputField(),
-	SelectVideoByNumber(),
+	SearchByQuery(),
+	SelectLinkByNumber(),
 ]
 
 
@@ -95,7 +96,9 @@ def OpenAIFunctionsAgent(tools=None, llm=None, verbose=False):
 		# Restrictions
 		- Preference for Japanese language sites
 		- If the website to search for videos is not already specified, youtube is assumed to be specified.
-		- No automatic video selection unless explicitly specified
+		- Use the function to select links by number if only numbers are entered.
+		- If you don't know, say you don't know.
+		- Minimal talk, no superfluous words.
 
 		# Combination of web sites and URLs to search
 		{
@@ -123,6 +126,7 @@ def OpenAIFunctionsAgent(tools=None, llm=None, verbose=False):
 	)
 
 
+import logging
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -134,10 +138,27 @@ from urllib.parse import quote
 import time
 
 
+logging.basicConfig(format='%(filename)s: %(levelname)s: %(funcName)s: %(message)s', level=logging.INFO)
+
 driver = webdriver.Chrome()
 
 """
-動画選択補助用の番号をつける処理
+Remove numbers for video selection aids
+"""
+
+
+def remove_numbers_from_videos(driver):
+	script = """
+	var circles = document.querySelectorAll('.video-number-circle');
+	circles.forEach(function(circle) {
+		circle.parentNode.removeChild(circle);
+	});
+	"""
+	driver.execute_script(script)
+
+
+"""
+Numbering process for video selection aids
 """
 # JavaScriptで半透明な丸と番号を作成
 script_add_numbers_template = """
@@ -163,177 +184,107 @@ circle.appendChild(text);
 document.body.appendChild(circle);
 """
 
+
 def add_numbers_to_videos_for_youtube(driver):
 	try:
-		WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, f"video-title")))
-		video_elements = driver.find_elements(By.ID, 'video-title')
+		WebDriverWait(driver, 10).until(
+			EC.presence_of_element_located((By.ID, f"video-title"))
+		)
+		video_elements = driver.find_elements(By.ID, "video-title")
 
 		for i, video in enumerate(video_elements):
-			x, y = video.location['x'], video.location['y']
-			script = script_add_numbers_template.format(x=x-60, y=y, i=i)
+			x, y = video.location["x"], video.location["y"]
+			script = script_add_numbers_template.format(x=x - 60, y=y, i=i)
 			driver.execute_script(script, video)
 	except TimeoutException:
-		print("Timed out waiting for input or textarea elements to load.")
+		logging.error("Timed out waiting for input or textarea elements to load.")
 		return "videos are not found"
-	return "videos are found"
 
-def add_numbers_to_videos_for_danime(driver):
+	return "The search was successful."
+
+
+def add_numbers_to_videos_common(driver, locator, condition_func, script_template):
 	try:
-		WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, f"a.textContainer")))
-		#video_elements = driver.find_elements(By.CSS_SELECTOR, f"a.textContainer")
-	
-		# <a>要素のリストを取得
-		a_elements = driver.find_elements(By.TAG_NAME, 'a')
+		WebDriverWait(driver, 10).until(EC.presence_of_element_located(locator))
+		elements = driver.find_elements(*locator)
 
-		# 条件に一致する<a>要素を取得
+		# Search for an element by matching a href. However, if there are multiple elements with the same href, the first element is selected.
 		matching_elements = {}
-		for a_element in a_elements:
-			href = a_element.get_attribute('href')
-			if href.startswith("https://animestore.docomo.ne.jp/animestore/") and "workId=" in href:
+		for element in elements:
+			href = element.get_attribute("href")
+			if condition_func(href):
 				if href not in matching_elements:
-					matching_elements[href] = a_element
-		
+					matching_elements[href] = element
+
 		video_elements = list(matching_elements.values())
-		print(f"video: {video_elements}")
 
 		for i, video in enumerate(video_elements):
-			x, y = video.location['x'], video.location['y']
-			script = script_add_numbers_template.format(x=x-60, y=y, i=i)
+			x, y = video.location["x"], video.location["y"]
+			script = script_template.format(x=x - 60, y=y, i=i)
 			driver.execute_script(script, video)
 	except TimeoutException:
-		print("Timed out waiting for input or textarea elements to load.")
+		logging.error("Timed out waiting for input or textarea elements to load.")
 		return "videos are not found"
-	return "videos are found"
 
+	return "The search was successful."
 
+"""
+		return add_numbers_to_videos_common(
+			driver,
+			(By.TAG_NAME, "a"),
+			lambda href: href.startswith("https://animestore.docomo.ne.jp/animestore/")
+			and "workId=" in href,
+			script_add_numbers_template,
+		)
+"""
 def add_numbers_to_videos(driver):
 	url = driver.current_url
-	print(f"url: {url} in add_numbers_to_videos")
-	if "google.com" in url:
-		return 
+	logging.info(f"url: {url}")
+
 	if "youtube.com" in url:
 		return add_numbers_to_videos_for_youtube(driver)
-	if "hulu.jp" in url:
-		return 
-	if "animestore.docomo.ne.jp" in url:
-		return add_numbers_to_videos_for_danime(driver)
-	if "amazon.co.jp" in url:
-		return #add_numbers_to_videos_for_primevideo(driver)
-	if "yahoo.co.jp" in url:
-		return 
-
-"""
-動画選択補助用の番号を削除
-"""
-def remove_numbers_from_videos(driver):
-	script = '''
-	var circles = document.querySelectorAll('.video-number-circle');
-	circles.forEach(function(circle) {
-		circle.parentNode.removeChild(circle);
-	});
-	'''
-	driver.execute_script(script)
-
-
-def find_first_field_with_id_or_name(fields):
-	"""指定された fields から最初に見つかる field の id または name と field name を返す。"""
-	for field in fields:
-		print(field.get("id"), field.get("name"), field.name)  # デバッグ用
-
-		# id も name も None なら次のループへ
-		if field.get("id") is None and field.get("name") is None:
-			continue
-
-		return field.get("id") or field.get("name"), field.name
-	return None, None
-
-
-def find_search_input_field(url):
-	global driver
-	driver.get(f"{url}")
-
-	try:
-		# inputまたはtextarea要素が読み込まれるまで最大10秒待つ
-		wait = WebDriverWait(driver, 10)
-		element = wait.until(
-			EC.presence_of_element_located((By.CSS_SELECTOR, "input, textarea"))
+	elif "animestore.docomo.ne.jp" in url:
+		return add_numbers_to_videos_common(
+			driver,
+			(By.XPATH, "//a[descendant::img]"),
+			lambda href: href is not None,
+			script_add_numbers_template,
 		)
-	except TimeoutException:
-		print("Timed out waiting for input or textarea elements to load.")
-		return None, None
-
-	html = driver.page_source
-	soup = BeautifulSoup(html, "html.parser")
-	# 'input' と 'textarea' タグを一度に検索
-	input_fields = soup.find_all(["input", "textarea"])
-	return find_first_field_with_id_or_name(input_fields)
+	elif "amazon.co.jp" in url:
+		return add_numbers_to_videos_common(
+			driver,
+			(By.XPATH, "//a[descendant::img]"),
+			lambda href: href is not None and "instant-video" in href,
+			script_add_numbers_template,
+		)
+	else:
+		return
 
 
 def search_by_query(url, input):
+	logging.info(f" url = {url}, input = {input}")
+	search_queries = {
+		"google.com": "https://www.google.com/search?tbm=vid&q=",
+		"youtube.com": "https://www.youtube.com/results?search_query=",
+		"hulu.jp": "https://www.hulu.jp/search?q=",
+		"animestore.docomo.ne.jp": "https://animestore.docomo.ne.jp/animestore/sch_pc?searchKey=",
+		"amazon.co.jp": "https://www.amazon.co.jp/s?i=instant-video&k=",
+		"yahoo.co.jp": "https://search.yahoo.co.jp/search?p=",
+	}
 	global driver
-	driver.get(f"{url}{quote(input)}")
-	time.sleep(1)
-	return add_numbers_to_videos(driver)
+	for domain, query_url in search_queries.items():
+		if domain in url:
+			driver.get(f"{query_url}{quote(input)}")
+			time.sleep(1)
+			return add_numbers_to_videos(driver)
+	return "This is the nsupported Web site."
 
 
-
-def search_by_input_field(input, url):
-	# スペシャルケースを追加
-	if "google.com" in url:
-		return search_by_query("https://www.google.com/search?tbm=vid&q=", input)
-	if "youtube.com" in url:
-		return search_by_query("https://www.youtube.com/results?search_query=", input)
-	if "hulu.jp" in url:
-		return search_by_query("https://www.hulu.jp/search?q=", input)
-	if "animestore.docomo.ne.jp" in url:
-		return search_by_query(
-			"https://animestore.docomo.ne.jp/animestore/sch_pc?searchKey=", input
-		)
-	if "amazon.co.jp" in url:
-		return search_by_query("https://www.amazon.co.jp/s?i=instant-video&k=", input)
-	if "yahoo.co.jp" in url:
-		return search_by_query(
-			"https://search.yahoo.co.jp/search?p=", input
-		)  # 動画検索だと読み込みが終了しないので動画検索はしていない (普通にアクセスしてもそういう挙動をする)
-
-	# 画面操作が必要な場合
-	global driver
-	search_field_id_or_name, field_type = find_search_input_field(url)
-	print(
-		f"search_field_id_or_name, field_type: {search_field_id_or_name}, {field_type}"
-	)
-
-	if search_field_id_or_name:
-		search_field = (
-			WebDriverWait(driver, 10).until(
-				EC.presence_of_element_located(
-					(By.CSS_SELECTOR, f"#{search_field_id_or_name}")
-				)
-			)
-			if driver.find_elements(By.CSS_SELECTOR, f"#{search_field_id_or_name}")
-			else WebDriverWait(driver, 10).until(
-				EC.presence_of_element_located((By.NAME, search_field_id_or_name))
-			)
-		)
-
-		if search_field.is_enabled() and search_field.is_displayed():
-			try:
-				search_field.clear()  # yahoo.co.jp では clear が効かない
-				search_field.send_keys(input)
-				search_field.send_keys(Keys.RETURN)
-				time.sleep(2)
-				# [TODO] 何を返すのか真島に考える
-				return driver.title
-			except Exception as e:
-				print(f"An error occurred: {e}")
-		else:
-			print("The search field is not editable.")
-	else:
-		print("No suitable search field found.")
-	return ""
-
-
-def select_video_by_number_for_youtube(num):
+"""
+Select the link (video) of the selected number
+"""
+def select_video_youtube(num):
+	logging.info(f"num = {num}")
 	global driver
 
 	try:
@@ -341,10 +292,10 @@ def select_video_by_number_for_youtube(num):
 		WebDriverWait(driver, 10).until(
 			EC.presence_of_element_located((By.ID, f"video-title"))
 		)
-		videos = driver.find_elements(By.ID, 'video-title')
+		videos = driver.find_elements(By.ID, "video-title")
 
-		#画面表示されていないと落ちるので click() を直接呼び出さない
-		#videos[num].click()
+		# 画面表示されていないと落ちるので click() を直接呼び出さない
+		# videos[num].click()
 		#
 		# 表示しているリンク番号を削除
 		remove_numbers_from_videos(driver)
@@ -356,28 +307,25 @@ def select_video_by_number_for_youtube(num):
 		time.sleep(2)
 		add_numbers_to_videos(driver)
 	except Exception as e:
-		print(f"An error occurred: {e}")
+		logging.error(f"An error occurred: {e}")
 		return f"Playback of the selected video has not started."
 
 	return f"Playback of the selected video has started."
 
-def select_video_by_numbers_for_danime(num):
+
+def select_video_common(num, locator, condition_func):
 	global driver
 
 	try:
-		a_element = WebDriverWait(driver, 10).until(
-			EC.presence_of_element_located((By.TAG_NAME, "a"))
-		)
-		a_elements = driver.find_elements(By.TAG_NAME, 'a')
+		WebDriverWait(driver, 10).until(EC.presence_of_element_located(locator))
+		elements = driver.find_elements(*locator)
 
-		# 条件に一致する<a>要素を取得
-		# 同じURLが存在する場合は最初のものを採用
 		matching_elements = {}
-		for a_element in a_elements:
-			href = a_element.get_attribute('href')
-			if href.startswith("https://animestore.docomo.ne.jp/animestore/") and "workId=" in href:
+		for element in elements:
+			href = element.get_attribute("href")
+			if condition_func(href):
 				if href not in matching_elements:
-					matching_elements[href] = a_element
+					matching_elements[href] = element
 
 		videos = list(matching_elements.values())
 
@@ -387,38 +335,54 @@ def select_video_by_numbers_for_danime(num):
 		driver.execute_script("arguments[0].scrollIntoView();", videos[num])
 		driver.execute_script("arguments[0].click();", videos[num])
 		# クリック先でリンク番号を追加
-		time.sleep(1) # 非同期処理のため WebDriverWait では正常に動作しない場合があるので sleep する
+		time.sleep(1)
 		add_numbers_to_videos(driver)
 	except Exception as e:
-		print(f"An error occurred: {e}")
+		logging.error(f"An error occurred: {e}")
 		return f"Playback of the selected video has not started."
 
 	return f"Playback of the selected video has started."
 
+"""
+		return select_video_common(
+			num,
+			(By.TAG_NAME, "a"),
+			lambda href: href.startswith("https://animestore.docomo.ne.jp/animestore/")
+			and "workId=" in href,
+		)
+"""	
 
-def select_video_by_number(num):
+def select_link_by_number(num):
 	global driver
 	url = driver.current_url
-	print(f"url: {url} in select_video_by_number")
-	if "google.com" in url:
-		return 
-	if "youtube.com" in url:
-		return select_video_by_number_for_youtube(num)
-	if "hulu.jp" in url:
-		return 
-	if "animestore.docomo.ne.jp" in url:
-		return select_video_by_numbers_for_danime(num)
-	if "amazon.co.jp" in url:
-		return #select_video_by_number_for_primevideo(driver)
-	if "yahoo.co.jp" in url:
-		return 
- 
+	logging.info(f"num = {num}, nul = {url}")
 
+	if "youtube.com" in url:
+		return select_video_youtube(num)
+	elif "animestore.docomo.ne.jp" in url:
+		return select_video_common(
+			num,
+			(By.XPATH, "//a[descendant::img]"),
+			lambda href: href is not None,
+		)
+	elif "amazon.co.jp" in url:
+		return select_video_common(
+			num,
+			(By.XPATH, "//a[descendant::img]"),
+			lambda href: href is not None and "instant-video" in href,
+		)
+	else:
+		return
+
+
+"""
+テスト
+"""
 while True:
 	user_input = input("Enter the text to search (or 'exit' to quit): ")
 	if user_input.lower() == "exit":
 		break
-#"""
+	# """
 	llm = ChatOpenAI(
 		temperature=0,
 		model=model_name,
@@ -426,15 +390,14 @@ while True:
 	agent_chain = OpenAIFunctionsAgent(tools=tools, llm=llm, verbose=True)
 	response = agent_chain.run(input=user_input)
 	print(f"response: {response}")
-#"""
+# """
 
-'''
+"""
 	driver.get(
 		f"https://www.youtube.com/results?search_query=%E6%8E%A8%E3%81%97%E3%81%AE%E5%AD%90"
 	)
 	select_link(1)
-'''
-
+"""
 
 
 driver.quit()
