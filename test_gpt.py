@@ -326,9 +326,9 @@ def select_video_common(num, locator, condition_func):
 		add_numbers_to_videos(driver)
 	except Exception as e:
 		logging.error(f"An error occurred: {e}")
-		return f"Playback of the selected video has not started."
+		return f"Error"
 
-	return f"Playback of the selected video has started."
+	return f"The search was successful. Please ask Human to select links."
 
 
 def select_link_by_number(num):
