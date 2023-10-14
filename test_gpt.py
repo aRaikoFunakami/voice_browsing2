@@ -1,8 +1,9 @@
 import json
 import os, logging
-from typing import Any
-from typing import Type
+from typing import Any, Type
 from pydantic import BaseModel, Field
+import threading
+import queue
 
 #
 # LangChain related test codes
@@ -13,137 +14,166 @@ from langchain.prompts import MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 from langchain.chat_models import ChatOpenAI
 from langchain.tools import BaseTool
-
-from remote_chrome import RemoteTest
-test = RemoteTest()
-
-model_name = "gpt-3.5-turbo-0613"
-#
-# Ugh!
-#
-memory = None
-
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 # init openai
 import config
-config.load()
+from remote_chrome import RemoteTest
+
+test = RemoteTest()
+
+model_name = "gpt-3.5-turbo-0613"
 
 
 # 動画を番号で選択する
 class SelectLinkByNumberInput(BaseModel):
-	num: int = Field(descption="Select the link you want to select by number")
-	# url: str = Field(descption="url of the web page")
+    num: int = Field(descption="Select the link you want to select by number")
+    # url: str = Field(descption="url of the web page")
 
 
 class SelectLinkByNumber(BaseTool):
-	name = "select_link_by_number"
-	description = "Use this function to select the link you want to select by number"
-	args_schema: Type[BaseModel] = SelectLinkByNumberInput
+    name = "select_link_by_number"
+    description = "Use this function to select the link you want to select by number"
+    args_schema: Type[BaseModel] = SelectLinkByNumberInput
 
-	def _run(self, num: int):
-		logging.info(f"num = {num}")
-		response = test.select_link_by_number(num=num)
-		logging.info(f"response: {response}")
-		return response
+    def _run(self, num: int):
+        logging.info(f"num = {num}")
+        response = test.select_link_by_number(num=num)
+        logging.info(f"response: {response}")
+        return response
 
-	def _arun(self, ticker: str):
-		raise NotImplementedError("not support async")
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
 
 
 # キーワードでWebサイトから動画を検索する
 class SearchByQueryInput(BaseModel):
-	url: str = Field(descption="url of the web page")
-	input: str = Field(
-		descption="String to be searched in the text field of the web page"
-	)
-
+    url: str = Field(descption="url of the web page")
+    input: str = Field(
+        descption="String to be searched in the text field of the web page"
+    )
 
 
 class SearchByQuery(BaseTool):
-	name = "search_by_query"
-	description = "You use this function when you want to search in the text field of a Web page. "
-	args_schema: Type[BaseModel] = SearchByQueryInput
+    name = "search_by_query"
+    description = "You use this function when you want to search in the text field of a Web page. "
+    args_schema: Type[BaseModel] = SearchByQueryInput
 
-	def _run(self, url: str, input: str):
-		logging.info(f" url = {url}, input = {input}")
-		response = test.search_by_query(url=url, input=input)
-		logging.info(f"response: {response}")
-		return response
+    def _run(self, url: str, input: str):
+        logging.info(f" url = {url}, input = {input}")
+        response = test.search_by_query(url=url, input=input)
+        logging.info(f"response: {response}")
+        return response
 
-	def _arun(self, ticker: str):
-		raise NotImplementedError("not support async")
-
-
-tools = [
-	SearchByQuery(),
-	SelectLinkByNumber(),
-]
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
 
 
-def OpenAIFunctionsAgent(tools=None, llm=None, verbose=False):
-	agent_kwargs = {
-		"extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
+class ThreadedGenerator:
+    def __init__(self):
+        self.queue = queue.Queue()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        item = self.queue.get()
+        if item is StopIteration:
+            raise item
+        return item
+
+    def send(self, data):
+        self.queue.put(data)
+
+    def close(self):
+        self.queue.put(StopIteration)
+
+
+class ChainStreamHandler(StreamingStdOutCallbackHandler):
+    def __init__(self, gen):
+        super().__init__()
+        self.gen = gen
+
+    def on_llm_new_token(self, token: str, **kwargs):
+        self.gen.send(token)
+
+
+class SimpleConversationChat:
+    tools = [
+        SearchByQuery(),
+        SelectLinkByNumber(),
+    ]
+    prompt_init = """
+	You are helping humans by manipulating the browser with chatgpt functions in natural language.
+
+	# Restrictions
+	- Preference for Japanese language sites
+	- If the website to search for videos is not already specified, youtube is assumed to be specified.
+	- Use the function to select links by number if only numbers are entered.
+	- If you don't know, say you don't know.
+	- Do not lie.
+	- Minimal talk, no superfluous words.
+
+	# Combination of web sites and URLs to search
+	{
+		"Amazon Prime Japan" : "https://www.amazon.co.jp/gp/browse.html?node=2351649051&ref_=nav_em__aiv_vid_0_2_2_2",.
+		"dアニメ" : "https://animestore.docomo.ne.jp/animestore/CF/search_index",
+		"Hulu" : "https://www.hulu.jp/",
+		"YouTube" : "https://www.youtube.com/",
+		"Yahoo" : "https://www.yahoo.co.jp/",
 	}
-	#
-	# Ugh!
-	#
-	global memory
-	if memory is None:
-		memory = ConversationBufferMemory(memory_key="memory", return_messages=True)
+	"""
 
-		prompt_init = """
-		You are helping humans by manipulating the browser with chatgpt functions in natural language.
+    def __init__(self, history):
+        config.load()
+        self.agent_kwargs = {
+            "extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
+        }
+        self.memory = ConversationBufferMemory(
+            memory_key="memory", return_messages=True
+        )
+        prompts = [
+            self.prompt_init,
+        ]
+        for prompt in prompts:
+            self.memory.save_context({"input": prompt}, {"ouput": "I understood!"})
 
-		# Restrictions
-		- Preference for Japanese language sites
-		- If the website to search for videos is not already specified, youtube is assumed to be specified.
-		- Use the function to select links by number if only numbers are entered.
-  		- If you don't know, say you don't know.
-		- Do not lie.
-		- Minimal talk, no superfluous words.
+    def generator(self, user_message):
+        g = ThreadedGenerator()
+        threading.Thread(target=self.llm_thread, args=(g, user_message)).start()
+        return g
 
-		# Combination of web sites and URLs to search
-		{
-			"Amazon Prime Japan" : "https://www.amazon.co.jp/gp/browse.html?node=2351649051&ref_=nav_em__aiv_vid_0_2_2_2",.
-			"dアニメ" : "https://animestore.docomo.ne.jp/animestore/CF/search_index",
-			"Hulu" : "https://www.hulu.jp/",
-			"YouTube" : "https://www.youtube.com/",
-			"Yahoo" : "https://www.yahoo.co.jp/",
-		}
-		"""
+    def llm_thread(self, g, user_message):
+        try:
+            logging.info(f"memory: {self.memory}")
 
-		prompts = [
-			prompt_init,
-		]
-		for prompt in prompts:
-			memory.save_context({"input": prompt}, {"ouput": "I understood!"})
+            llm = ChatOpenAI(
+                temperature=0,
+                model=model_name,
+            )
 
-	return initialize_agent(
-		tools=tools,
-		llm=llm,
-		agent=AgentType.OPENAI_FUNCTIONS,
-		verbose=verbose,
-		agent_kwargs=agent_kwargs,
-		memory=memory,
-	)
+            agent_chain = initialize_agent(
+                tools=self.tools,
+                llm=llm,
+                agent=AgentType.OPENAI_FUNCTIONS,
+                verbose=True,
+                agent_kwargs=self.agent_kwargs,
+                memory=self.memory,
+            )
+            return agent_chain.run(input=user_message)
+        finally:
+            g.close()
+
+    def llm_run(self, user_message):
+        """sync call llm_thread directly instead of chat.generator(user_input)"""
+        g = ThreadedGenerator()
+        chat.llm_thread(g, user_input)
 
 
-
-
-"""
-テスト
-"""
-while True:
-	user_input = input("Enter the text to search (or 'exit' to quit): ")
-	if user_input.lower() == "exit":
-		break
-	# """
-	llm = ChatOpenAI(
-		temperature=0,
-		model=model_name,
-	)
-	agent_chain = OpenAIFunctionsAgent(tools=tools, llm=llm, verbose=True)
-	response = agent_chain.run(input=user_input)
-	print(f"response: {response}")
-# """
-
+if __name__ == "__main__":
+    chat = SimpleConversationChat("")
+    while True:
+        user_input = input("Enter the text to search (or 'exit' to quit): ")
+        if user_input.lower() == "exit":
+            break
+        chat.llm_run(user_input)

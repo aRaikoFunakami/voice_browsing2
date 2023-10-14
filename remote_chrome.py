@@ -127,7 +127,7 @@ class RemoteTest:
                 self.script_add_numbers_template,
             )
         else:
-            return
+            return "The search was successful. Link selection by number not supported in this web site."
 
     """
 	Called from function call of langchain
@@ -139,10 +139,10 @@ class RemoteTest:
         """
         Called from function call of Open AI
         Args:
-            url(str) : VOD service to search for.
-            input(str): search string.
+                url(str) : VOD service to search for.
+                input(str): search string.
         Returns:
-            str: Answer about the results of clicking on the link.
+                str: Answer about the results of clicking on the link.
         """
         logging.info(f" url = {url}, input = {input}")
         search_queries = {
@@ -222,9 +222,9 @@ class RemoteTest:
         """
         Called from function call of Open AI
         Args:
-            num (int): click the numth link
+                num (int): click the numth link
         Returns:
-            str: Answer about the results of clicking on the link
+                str: Answer about the results of clicking on the link
         """
         url = self.driver.current_url
         logging.info(f"num = {num}, nul = {url}")
