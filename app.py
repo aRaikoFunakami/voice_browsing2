@@ -22,10 +22,10 @@ def upload_audio():
                 response = openai.Audio.transcribe("whisper-1", temp_read_file)
 
         transcription = response["text"]
-        logging.info(transcription)
+        logging.info(f"transcription {transcription}")
         global remote_chat
         response = remote_chat.llm_run(transcription)
-        return jsonify({"transcription": response})
+        return jsonify({"transcription": transcription})
     except Exception as e:
         logging.info(f"Exception: {str(e)}")
         return jsonify({"error": "Server Error"}), 500
@@ -38,7 +38,7 @@ def index():
 
 if __name__ == "__main__":
     logging.basicConfig(
-        format="[%(asctime)s] [%(process)d] [%(levelname)s] [%(filename)s:%(lineno)d %(funcName)s]",
+        format="[%(asctime)s] [%(process)d] [%(levelname)s] [%(filename)s:%(lineno)d %(funcName)s] [%(message)s]",
         level=logging.INFO,
     )
     openai.api_key = config.keys["openai_api_key"]

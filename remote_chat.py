@@ -25,9 +25,27 @@ test = None
 
 
 # 動画を番号で選択する
+class PlaySuspendInput(BaseModel):
+    playback_or_suspend: str = Field(descption="Toggle pause and playback while playing a video")
+
+
+class PlaySuspend(BaseTool):
+    name = "play_suspend"
+    description = "Use this function to toggle pause and playback while playing a video"
+    args_schema: Type[BaseModel] = PlaySuspendInput
+
+    def _run(self, playback_or_suspend: str):
+        logging.info(f"play_or_suepend = {playback_or_suspend}")
+        response = test.play_suspend()
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
+# 動画を番号で選択する
 class SelectLinkByNumberInput(BaseModel):
     num: int = Field(descption="Select the link you want to select by number")
-    # url: str = Field(descption="url of the web page")
 
 
 class SelectLinkByNumber(BaseTool):
@@ -99,11 +117,13 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 class SimpleConversationRemoteChat:
     tools = [
+        PlaySuspend(),
         SearchByQuery(),
         SelectLinkByNumber(),
     ]
     prompt_init = """
 	You are helping humans by manipulating the browser with chatgpt functions in natural language.
+    Follow the instructions in markdown format below
 
 	# Restrictions
 	- Preference for Japanese language sites
@@ -112,6 +132,10 @@ class SimpleConversationRemoteChat:
 	- If you don't know, say you don't know.
 	- Do not lie.
 	- Minimal talk, no superfluous words.
+    - Use function call in the following cases
+    -- Searching for videos
+    -- Pause a video
+    -- Play or resume video
 
 	# Combination of web sites and URLs to search
 	{
