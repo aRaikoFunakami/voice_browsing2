@@ -12,10 +12,6 @@ import time
 
 class RemoteTest:
     def __init__(self):
-        logging.basicConfig(
-            format="%(filename)s: %(levelname)s: %(funcName)s: %(message)s",
-            level=logging.INFO,
-        )
         self.driver = webdriver.Chrome()
 
     def __del__(self):
@@ -139,10 +135,10 @@ class RemoteTest:
         """
         Called from function call of Open AI
         Args:
-                url(str) : VOD service to search for.
-                input(str): search string.
+                        url(str) : VOD service to search for.
+                        input(str): search string.
         Returns:
-                str: Answer about the results of clicking on the link.
+                        str: Answer about the results of clicking on the link.
         """
         logging.info(f" url = {url}, input = {input}")
         search_queries = {
@@ -222,9 +218,9 @@ class RemoteTest:
         """
         Called from function call of Open AI
         Args:
-                num (int): click the numth link
+                        num (int): click the numth link
         Returns:
-                str: Answer about the results of clicking on the link
+                        str: Answer about the results of clicking on the link
         """
         url = self.driver.current_url
         logging.info(f"num = {num}, nul = {url}")
@@ -251,6 +247,10 @@ class RemoteTest:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format="%(filename)s: %(levelname)s: %(funcName)s: %(message)s",
+        level=logging.INFO,
+    )
     test = RemoteTest()
     test.start()
     test.search_by_query("http://www.youtube.com", "フリーレン")

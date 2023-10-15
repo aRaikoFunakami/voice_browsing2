@@ -20,9 +20,8 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 import config
 from remote_chrome import RemoteTest
 
-test = RemoteTest()
-
 model_name = "gpt-3.5-turbo-0613"
+test = None
 
 
 # 動画を番号で選択する
@@ -98,7 +97,7 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
         self.gen.send(token)
 
 
-class SimpleConversationChat:
+class SimpleConversationRemoteChat:
     tools = [
         SearchByQuery(),
         SelectLinkByNumber(),
@@ -126,6 +125,8 @@ class SimpleConversationChat:
 
     def __init__(self, history):
         config.load()
+        global test
+        test = RemoteTest()
         self.agent_kwargs = {
             "extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
         }
@@ -171,7 +172,7 @@ class SimpleConversationChat:
 
 
 if __name__ == "__main__":
-    chat = SimpleConversationChat("")
+    chat = SimpleConversationRemoteChat("")
     while True:
         user_input = input("Enter the text to search (or 'exit' to quit): ")
         if user_input.lower() == "exit":
