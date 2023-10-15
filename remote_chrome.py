@@ -12,7 +12,9 @@ import time
 
 class RemoteTest:
     def __init__(self):
-        self.driver = webdriver.Chrome()
+        options = webdriver.ChromeOptions()
+        # options.add_argument("--user-agent=Mozilla/5.0 (Linux; Android 4.3; Nexus 7 Build/JSS15Q) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36")
+        self.driver = webdriver.Chrome(options=options)
 
     def __del__(self):
         if self.driver:
@@ -91,10 +93,12 @@ class RemoteTest:
                         matching_elements[href] = element
 
             video_elements = list(matching_elements.values())
+            # logging.info(video_elements)
 
             for i, video in enumerate(video_elements):
                 x, y = video.location["x"], video.location["y"]
-                script = script_template.format(x=x - 60, y=y, i=i)
+                script = script_template.format(x=x + 15, y=y, i=i)
+                logging.info(f"(x, y) = ({x}, {y})")
                 driver.execute_script(script, video)
         except TimeoutException:
             logging.error("Timed out waiting for input or textarea elements to load.")
@@ -106,7 +110,14 @@ class RemoteTest:
         url = driver.current_url
         logging.info(f"url: {url}")
 
-        if "youtube.com" in url:
+        if "m.youtube.com" in url:
+            return self.add_numbers_to_videos_common(
+                driver,
+                (By.XPATH, "//a[descendant::img]"),
+                lambda href: href is not None,
+                self.script_add_numbers_template,
+            )
+        elif "youtube.com" in url:
             return self.add_numbers_to_videos_for_youtube(driver)
         elif "animestore.docomo.ne.jp" in url:
             return self.add_numbers_to_videos_common(
@@ -135,10 +146,10 @@ class RemoteTest:
         """
         Called from function call of Open AI
         Args:
-                        url(str) : VOD service to search for.
-                        input(str): search string.
+                                        url(str) : VOD service to search for.
+                                        input(str): search string.
         Returns:
-                        str: Answer about the results of clicking on the link.
+                                        str: Answer about the results of clicking on the link.
         """
         logging.info(f" url = {url}, input = {input}")
         search_queries = {
@@ -218,14 +229,20 @@ class RemoteTest:
         """
         Called from function call of Open AI
         Args:
-                        num (int): click the numth link
+                                        num (int): click the numth link
         Returns:
-                        str: Answer about the results of clicking on the link
+                                        str: Answer about the results of clicking on the link
         """
         url = self.driver.current_url
-        logging.info(f"num = {num}, nul = {url}")
+        logging.info(f"num = {num}, url = {url}")
 
-        if "youtube.com" in url:
+        if "m.youtube.com" in url:
+            return self.select_video_common(
+                num,
+                (By.XPATH, "//a[descendant::img]"),
+                lambda href: href is not None,
+            )
+        elif "youtube.com" in url:
             return self.select_video_youtube(num)
         elif "animestore.docomo.ne.jp" in url:
             return self.select_video_common(
@@ -242,6 +259,57 @@ class RemoteTest:
         else:
             return
 
+    def play_suspend_youtube(self) -> str:
+        element = self.driver.find_element(By.TAG_NAME, "html")
+        element.send_keys("k")
+        return "success!!!"
+
+    def play_suspend_youtube_mobile(self) -> str:
+        """
+        it doesn't work well. We must fix issus
+        """
+        try:
+            # 動画のリンクを取得（例として最初の動画）
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.ID, f"ytm-custom-control"))
+            )
+            element = self.driver.find_element(By.ID, "ytm-custom-control")
+            element.click()
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located(
+                    (
+                        By.XPATH,
+                        f"//button[@class='player-control-play-pause-icon']//c3-icon",
+                    )
+                )
+            )
+            c3_icon_element = self.driver.find_element(
+                By.XPATH, "//button[@class='player-control-play-pause-icon']//c3-icon"
+            )
+            c3_icon_element.click()
+        except TimeoutException:
+            logging.error("Timed out waiting for input or textarea elements to load.")
+            return "videos are not found"
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            return f"Error"
+
+    def play_suspend(self) -> str:
+        """
+        Called from function call of Open AI
+        Args:
+        Returns:
+                str: Answer about the results of play or suspend
+        """
+        url = self.driver.current_url
+        logging.info(f"url = {url}")
+        if "m.youtube.com" in url:
+            return self.play_suspend_youtube_mobile()
+        if "youtube.com" in url:
+            return self.play_suspend_youtube()
+        else:
+            return
+
     def start(self):
         self.driver.get("https://www.google.com")
 
@@ -255,5 +323,7 @@ if __name__ == "__main__":
     test.start()
     test.search_by_query("http://www.youtube.com", "フリーレン")
     time.sleep(2)
-    test.select_link_by_number(2)
+    test.select_link_by_number(0)
+    time.sleep(2)
+    test.play_suspend()
     time.sleep(10)
