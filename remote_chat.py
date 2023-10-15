@@ -18,7 +18,8 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 # init openai
 import config
-from remote_chrome import RemoteTest
+#from remote_chrome import RemoteTest
+from remote_chrome_androidtablet import RemoteTest
 
 model_name = "gpt-3.5-turbo-0613"
 test = None
