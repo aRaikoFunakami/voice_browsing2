@@ -24,6 +24,42 @@ from remote_chrome_androidtablet import RemoteTest
 model_name = "gpt-3.5-turbo-0613"
 test = None
 
+# play next video
+class PlayNextVideoInput(BaseModel):
+    nextvideo: str = Field(descption="Play the next video while playing a video.")
+
+class PlayNextVideo(BaseTool):
+    name = "play_next_video"
+    description = "Use this function to play the next video while playing a video."
+    args_schema: Type[BaseModel] = PlayNextVideoInput
+
+    def _run(self, nextvideo: str):
+        logging.info(f"nextvideo = {nextvideo}")
+        response = test.play_next_video()
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
+# play previous video
+class PlayPreviousVideoInput(BaseModel):
+    previousvideo: str = Field(descption="Play the previous video while playing a video.")
+
+class PlayPreviousVideo(BaseTool):
+    name = "play_previous_video"
+    description = "Use this function to play the previous video while playing a video."
+    args_schema: Type[BaseModel] = PlayPreviousVideoInput
+
+    def _run(self, previousvideo: str):
+        logging.info(f"previousvideo = {previousvideo}")
+        response = test.play_previous_video()
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
 # Fullscreen
 class FullscreenInput(BaseModel):
     fullscreen: bool = Field(descption="Toggle fullscreen and normal screen while playing a video.")
@@ -188,6 +224,8 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 class SimpleConversationRemoteChat:
     tools = [
+        PlayNextVideo(),
+        PlayPreviousVideo(),
         Fullscreen(),
         FastForwardPlayback(),
         SlowForwardPlayback(),

@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Any
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -282,13 +283,13 @@ class RemoteTest:
 		else:
 			return
 
-	def youtube_shortcut_key(self, key:str) -> str:
+	def youtube_shortcut_key(self, *keys:Any) -> str:
 		try:
 			WebDriverWait(self.driver, 10).until(
 				EC.presence_of_element_located((By.XPATH, '//html'))
 			)
 			elements =self.driver.find_elements(By.XPATH, "//html")
-			elements[0].send_keys(key)
+			elements[0].send_keys(keys)
 			return "success!!!"
 		except TimeoutException:
 			logging.error("Timed out waiting for input or textarea elements to load.")
@@ -407,9 +408,40 @@ class RemoteTest:
 		if "m.youtube.com" in url:
 			return
 		if "youtube.com" in url:
-			# not support add_numbers
-			self.remove_numbers_from_videos(self.driver)
 			return self.youtube_shortcut_key("<")
+		else:
+			return
+
+	def play_next_video(self) -> str:
+		"""
+		Called from function call of Open AI
+		Args:
+		Returns:
+				str: Answer about the results of slow_forward_playback
+		"""
+		url = self.get_current_url()
+		logging.info(f"url = {url}")
+		if "m.youtube.com" in url:
+			return
+		if "youtube.com" in url:
+			return self.youtube_shortcut_key("N", Keys.SHIFT)
+		else:
+			return
+
+	def play_previous_video(self) -> str:
+		"""
+		Called from function call of Open AI
+		Args:
+		Returns:
+				str: Answer about the results of slow_forward_playback
+		"""
+		url = self.get_current_url()
+		logging.info(f"url = {url}")
+		if "m.youtube.com" in url:
+			return
+		if "youtube.com" in url:
+			#return self.youtube_shortcut_key("P", Keys.SHIFT)
+			return self.driver.back()
 		else:
 			return
 
@@ -430,7 +462,7 @@ if __name__ == "__main__":
 	time.sleep(1)
 
 	test.fullscreen()
-	time.sleep(2)
+	time.sleep(1)
 	test.fullscreen()
 	time.sleep(1)
 
@@ -438,22 +470,25 @@ if __name__ == "__main__":
 	time.sleep(2)
 	test.fast_forward_playback()
 	time.sleep(2)
-	test.fast_forward_playback()
-	time.sleep(1)
 
 	test.slow_forward_playback()
 	time.sleep(2)
 	test.slow_forward_playback()
 	time.sleep(2)
-	test.slow_forward_playback()
-	time.sleep(1)
 
 	test.mute()
 	time.sleep(2)
 	test.mute()
-	time.sleep(1)
+	time.sleep(2)
 
 	test.play_suspend()
 	time.sleep(2)
 	test.play_suspend()
-	time.sleep(1)
+	time.sleep(2)
+
+	test.play_next_video()
+	time.sleep(2)
+	test.play_previous_video()
+	time.sleep(2)
+
+	time.sleep(10)
