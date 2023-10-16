@@ -1,47 +1,23 @@
-from appium import webdriver
-from appium.webdriver.common.appiumby import AppiumBy
-from appium.options.android import UiAutomator2Options
-
 import logging
-#from selenium import webdriver
+import time
+from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from bs4 import BeautifulSoup
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib.parse import quote
-import time
+
 
 
 class RemoteTest:
-	capabilities = {
-		"platformName":'Android',
-		"deviceName":'ADT-3',
-		"browserName": "Chrome",
-		"appium:automationName":'UiAutomator2',
-		"newCommandTimeout": 1200,
-		#"appium:appPackage":'com.access_company.nfbe.oibauto.content_shell_apk',
-		#"appium:appActivity":'.ContentShellActivity',
-		"language":'en',
-		"locale":'US',
-		#"chromedriverExecutable":"/Users/Raiko.Funakami/chromedriver/M74/chromedriver",
-		"chromedriverExecutable":"/Users/Raiko.Funakami/chromedriver/M116/chromedriver",
-		#"appium:chromeOptions":{'w3c': False},
-		"appium:chromeOptions":{'args': [
-	  		"--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
-		]},
-		"autoAcceptAlerts":True,
-		"noReset":True,
-	}
-	appium_server_url = 'http://localhost:4723'
 	def __init__(self):
-		capabilities_options = UiAutomator2Options().load_capabilities(self.capabilities)
-		self.driver = webdriver.Remote(command_executor=self.appium_server_url, options=capabilities_options)
-		for i in self.driver.contexts:
-			print(i)
-		#shell = self.driver.contexts[1]
-		#self.driver.switch_to.context(shell)
+		options = webdriver.ChromeOptions()
+		chromedriver = '/Users/Raiko.Funakami/chromedriver/M116/chromedriver'
+		options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
+		options.add_experimental_option('androidPackage', 'com.android.chrome')
+		self.driver = webdriver.Chrome(service=ChromeService(chromedriver), options=options)
 
 	def __del__(self):
 		if self.driver:
