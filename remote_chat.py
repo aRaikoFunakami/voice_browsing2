@@ -24,11 +24,81 @@ from remote_chrome_androidtablet import RemoteTest
 model_name = "gpt-3.5-turbo-0613"
 test = None
 
+# Fullscreen
+class FullscreenInput(BaseModel):
+    fullscreen: bool = Field(descption="Toggle fullscreen and normal screen while playing a video.")
 
-# 動画を番号で選択する
+class Fullscreen(BaseTool):
+    name = "fullscreen"
+    description = "Use this function to toggle fullscreen and normal screen  while playing a video"
+    args_schema: Type[BaseModel] = FullscreenInput
+
+    def _run(self, fullscreen: bool):
+        logging.info(f"fullscreen = {fullscreen}")
+        response = test.fullscreen()
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
+# FastPlayback
+class FastForwardPlaybackInput(BaseModel):
+    fastforward: str = Field(descption="Reduce the video playback speed while playing a video.")
+
+class FastForwardPlayback(BaseTool):
+    name = "fast_forward_playback"
+    description = "Use this function to reduce the video playback speed while playing a video."
+    args_schema: Type[BaseModel] = FastForwardPlaybackInput
+
+    def _run(self, fastforward: str):
+        logging.info(f"mute = {fastforward}")
+        response = test.fast_forward_playback()
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
+# SlowPlayback
+class SlowForwardPlaybackInput(BaseModel):
+    slowforward: str = Field(descption="Reduce the video playback speed while playing a video.")
+
+class SlowForwardPlayback(BaseTool):
+    name = "slow_forward_playback"
+    description = "Use this function to reduce the video playback speed while playing a video."
+    args_schema: Type[BaseModel] = SlowForwardPlaybackInput
+
+    def _run(self, slowforward: str):
+        logging.info(f"slowforward = {slowforward}")
+        response = test.slow_forward_playback()
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
+# Mute
+class MuteInput(BaseModel):
+    mute: bool = Field(descption="Toggle mute and unmute while playing a video.")
+
+class Mute(BaseTool):
+    name = "mute"
+    description = "Use this function to toggle mute and unmute while playing a video."
+    args_schema: Type[BaseModel] = MuteInput
+
+    def _run(self, mute: bool):
+        logging.info(f"mute = {mute}")
+        response = test.mute()
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
+# Play or Suspend
 class PlaySuspendInput(BaseModel):
     playback_or_suspend: str = Field(descption="Toggle pause and playback while playing a video")
-
 
 class PlaySuspend(BaseTool):
     name = "play_suspend"
@@ -118,6 +188,10 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 class SimpleConversationRemoteChat:
     tools = [
+        Fullscreen(),
+        FastForwardPlayback(),
+        SlowForwardPlayback(),
+        Mute(),
         PlaySuspend(),
         SearchByQuery(),
         SelectLinkByNumber(),

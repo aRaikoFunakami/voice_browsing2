@@ -282,13 +282,13 @@ class RemoteTest:
 		else:
 			return
 
-	def play_suspend_youtube(self) -> str:
+	def youtube_shortcut_key(self, key:str) -> str:
 		try:
 			WebDriverWait(self.driver, 10).until(
 				EC.presence_of_element_located((By.XPATH, '//html'))
 			)
 			elements =self.driver.find_elements(By.XPATH, "//html")
-			elements[0].send_keys("k")
+			elements[0].send_keys(key)
 			return "success!!!"
 		except TimeoutException:
 			logging.error("Timed out waiting for input or textarea elements to load.")
@@ -339,7 +339,77 @@ class RemoteTest:
 		if "m.youtube.com" in url:
 			return self.play_suspend_youtube_mobile()
 		if "youtube.com" in url:
-			return self.play_suspend_youtube()
+			return self.youtube_shortcut_key("k")
+		else:
+			return
+
+	def mute(self) -> str:
+		"""
+		Called from function call of Open AI
+		Args:
+		Returns:
+				str: Answer about the results of mute
+		"""
+		url = self.get_current_url()
+		logging.info(f"url = {url}")
+		if "m.youtube.com" in url:
+			return
+		if "youtube.com" in url:
+			return self.youtube_shortcut_key("m")
+		else:
+			return
+
+	def fullscreen(self) -> str:
+		"""
+		Called from function call of Open AI
+		Args:
+		Returns:
+				str: Answer about the results of fullscreen
+		"""
+		url = self.get_current_url()
+		logging.info(f"url = {url}")
+		if "m.youtube.com" in url:
+			return
+		if "youtube.com" in url:
+			# not support add_numbers
+			self.remove_numbers_from_videos(self.driver)
+			return self.youtube_shortcut_key("f")
+		else:
+			return
+
+	def fast_forward_playback(self) -> str:
+		"""
+		Called from function call of Open AI
+		Args:
+		Returns:
+				str: Answer about the results of fast_forward_playback
+		"""
+		url = self.get_current_url()
+		logging.info(f"url = {url}")
+		if "m.youtube.com" in url:
+			return
+		if "youtube.com" in url:
+			# not support add_numbers
+			self.remove_numbers_from_videos(self.driver)
+			return self.youtube_shortcut_key(">")
+		else:
+			return
+
+	def slow_forward_playback(self) -> str:
+		"""
+		Called from function call of Open AI
+		Args:
+		Returns:
+				str: Answer about the results of slow_forward_playback
+		"""
+		url = self.get_current_url()
+		logging.info(f"url = {url}")
+		if "m.youtube.com" in url:
+			return
+		if "youtube.com" in url:
+			# not support add_numbers
+			self.remove_numbers_from_videos(self.driver)
+			return self.youtube_shortcut_key("<")
 		else:
 			return
 
@@ -355,8 +425,35 @@ if __name__ == "__main__":
 	test = RemoteTest()
 	test.start()
 	test.search_by_query("http://www.youtube.com", "フリーレン")
-	time.sleep(2)
+	time.sleep(1)
 	test.select_link_by_number(0)
+	time.sleep(1)
+
+	test.fullscreen()
 	time.sleep(2)
+	test.fullscreen()
+	time.sleep(1)
+
+	test.fast_forward_playback()
+	time.sleep(2)
+	test.fast_forward_playback()
+	time.sleep(2)
+	test.fast_forward_playback()
+	time.sleep(1)
+
+	test.slow_forward_playback()
+	time.sleep(2)
+	test.slow_forward_playback()
+	time.sleep(2)
+	test.slow_forward_playback()
+	time.sleep(1)
+
+	test.mute()
+	time.sleep(2)
+	test.mute()
+	time.sleep(1)
+
 	test.play_suspend()
 	time.sleep(2)
+	test.play_suspend()
+	time.sleep(1)
