@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "voice-browsing2"
+version = "0.1.0"
+description = "Control the web browser chrome by voice"
+authors = ["Raiko Funakami <raiko.funakami@access-company.com>"]
+license = "Apache License"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flask = "^3.0.0"
+openai = "^0.28.1"
+langchain = "^0.0.315"
+selenium = "^4.14.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

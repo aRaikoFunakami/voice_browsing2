@@ -1,3 +1,4 @@
+import os
 import logging
 import time
 from typing import Any
@@ -15,7 +16,7 @@ from urllib.parse import quote
 class RemoteTest:
 	def __init__(self):
 		options = webdriver.ChromeOptions()
-		chromedriver = '/Users/Raiko.Funakami/chromedriver/M116/chromedriver'
+		chromedriver = os.path.abspath('./chromedriver/M116/chromedriver')
 		options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
 		options.add_experimental_option('androidPackage', 'com.android.chrome')
 		self.driver = webdriver.Chrome(service=ChromeService(chromedriver), options=options)
