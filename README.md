@@ -14,6 +14,18 @@ $ git clone https://github.com/aRaikoFunakami/voice_browsing2.git
 $ cd voice_browsing2/
 ```
 
+Please prepare [poetry](https://python-poetry.org/docs/) like the following commands
+
+```terminal: for Mac/Linux/Windows
+$ curl -sSL https://install.python-poetry.org | python3 -
+```
+
+If your machine is Mac...
+
+```terminal: for Mac brew
+$ brew install poetry
+```
+
 Once inside the project directory, use poetry to install the necessary dependencies:
 
 ```terminal
