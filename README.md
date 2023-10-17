@@ -93,3 +93,16 @@ open -a 'Google Chrome' 'http://127.0.0.1:8080'
 Now you can use voice commands to control the browsing experience on your Android device.
 
 These steps should provide a smooth setup and user experience for text and voice-controlled browsing using the voice_browsing2 project.
+
+## Support list in v0.1.0
+
+| Actions                  | YouTube | Amazon Prime | Hulu | dAnime |
+|--------------------------|---------|--------------|------|--------|
+| Video Search             | YES     | YES          | YES  | YES    |
+| Select by Number         | YES     | -            | -    | -      |
+| Play/Pause               | YES     | -            | -    | -      |
+| Audio Mute               | YES     | -            | -    | -      |
+| Enter Fullscreen         | YES     | -            | -    | -      |
+| Adjust Playback Speed    | YES     | -            | -    | -      |
+| Navigate Videos          | YES     | -            | -    | -      |
+
