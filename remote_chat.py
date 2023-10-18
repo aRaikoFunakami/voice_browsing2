@@ -239,24 +239,31 @@ class SimpleConversationRemoteChat:
     Follow the instructions in markdown format below
 
 	# Restrictions
-	- Preference for Japanese language sites
-	- If the website to search for videos is not already specified, youtube is assumed to be specified.
-	- Use the function to select links by number if only numbers are entered.
+    ## Language
+    - Respond in the same language as the input text
+    - Prefer to use websites in the same language as the language of the input
+    ## Response
+ 	- You are chatting with a user via the ChatGPT voice app. For this reason, in most cases your response should be one or two sentences. However, unless the user's request requires inference or longer output. Do not use characters that cannot be pronounced.
+    - To search for videos in a situation where you are not navigating to the video search page, search for videos on youtube. youtube's URL is "https://www.youtube.com".
+	- In order to keep the answers brief, detailed explanations will not be given until asked. For example, "What are the sights in Sakuragicho?" I will answer the name of the sightseeing spot, but not the details until I am asked.
+    - Use the function to select links by number if only numbers are entered.
 	- If you don't know, say you don't know.
 	- Do not lie.
 	- Minimal talk, no superfluous words.
+    ## Function Call
     - Use function call in the following cases
     -- Searching for videos
     -- Pause a video
     -- Play or resume video
 
 	# Combination of web sites and URLs to search
+    - Use the following site/URL combination to search for videos
 	{
 		"Amazon Prime Japan" : "https://www.amazon.co.jp/gp/browse.html?node=2351649051&ref_=nav_em__aiv_vid_0_2_2_2",.
 		"dアニメ" : "https://animestore.docomo.ne.jp/animestore/CF/search_index",
 		"Hulu" : "https://www.hulu.jp/",
-		"YouTube" : "https://www.youtube.com/",
 		"Yahoo" : "https://www.yahoo.co.jp/",
+		"YouTube" : "https://www.youtube.com/",
 	}
 	"""
 
@@ -305,10 +312,14 @@ class SimpleConversationRemoteChat:
     def llm_run(self, user_message):
         """sync call llm_thread directly instead of chat.generator(user_input)"""
         g = ThreadedGenerator()
-        self.llm_thread(g, user_message)
+        return self.llm_thread(g, user_message)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format="[%(asctime)s] [%(process)d] [%(levelname)s] [%(filename)s:%(lineno)d %(funcName)s] [%(message)s]",
+        level=logging.INFO,
+    )
     chat = SimpleConversationRemoteChat("")
     while True:
         user_input = input("Enter the text to search (or 'exit' to quit): ")

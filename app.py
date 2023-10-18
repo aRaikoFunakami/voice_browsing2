@@ -25,7 +25,9 @@ def upload_audio():
         logging.info(f"transcription {transcription}")
         global remote_chat
         response = remote_chat.llm_run(transcription)
-        return jsonify({"transcription": transcription})
+        return jsonify({"transcription": transcription,
+                        "response": response,
+                        })
     except Exception as e:
         logging.info(f"Exception: {str(e)}")
         return jsonify({"error": "Server Error"}), 500

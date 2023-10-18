@@ -58,6 +58,13 @@ R52N800FR2Y	device
 
 The device ID R52N800FR2Y confirms that the device is successfully connected.
 
+If you want to connect to the device via WiFi.
+
+```termina
+$ adb tcpip 5555
+$ adb connect xxx.xxx.xxx.xxx
+```
+
 
 ## Text-based Browsing
 To initiate text-based browsing, run the following command:

@@ -1,12 +1,19 @@
 const toggleButton = document.getElementById('toggleRecording');
 const transcriptionDiv = document.getElementById('transcription');
+const responseDiv = document.getElementById('response');
+const languageDiv = document.getElementById('language');
 let mediaRecorder;
 let audioChunks = [];
+let language = 'ja-JP';
+languageDiv.innerHTML = 'lang: '+ language;
 
 toggleButton.addEventListener('click', async () => {
     const currentState = toggleButton.getAttribute('data-state');
 
+    // Chrome will return an empty array if the first call is to an empty array.
+    speechSynthesis.getVoices();
     if (currentState === 'inactive') {
+        window.speechSynthesis.cancel();
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
         /*
@@ -54,6 +61,30 @@ toggleButton.addEventListener('click', async () => {
             console.log(data);
 
             transcriptionDiv.innerHTML = data.transcription;
+            responseDiv.innerHTML = data.response;
+
+            const utterance = new SpeechSynthesisUtterance(data.response);
+            console.log(`SpeechHandler.speakUtterance ${language}`)
+            var voices = speechSynthesis.getVoices();
+
+            utterance.lang = language;
+            if (language == 'en-US') {
+                utterance.voice = voices[145]; // en-US:Google US English Female
+                utterance.rate = 0.9;
+                this.delimiter = this.delimitersDefault;
+            } else if (language == 'zh-CN') {
+                utterance.voice = voices[169]; // zh-CN: Google 普通話
+                utterance.rate = 0.9;
+                this.delimiters = this.delimitersDefault;
+            } else if (language == 'ko-KR') {
+                utterance.voice = voices[155];
+                utterance.rate = 1.0;
+                this.delimiters = this.delimitersDefault;
+            } else {
+                utterance.language = 'ja-JP';
+                utterance.rate = 1.3;
+            }
+            window.speechSynthesis.speak(utterance);
 
             toggleButton.src = 'mic_ready.png';
             toggleButton.setAttribute('data-state', 'inactive');
@@ -72,4 +103,27 @@ toggleButton.addEventListener('click', async () => {
         toggleButton.src = 'mic_disable.png';
         toggleButton.style.cursor = 'not-allowed';
     }
+});
+
+window.addEventListener('DOMContentLoaded', (event) => {
+    // language
+    window.addEventListener('keypress', (e) => {
+        if (e.code === 'Space') {
+            return
+        }
+        else if (e.code === 'KeyE') {
+            language = 'en-US';
+        }
+        else if (e.code === 'KeyJ') {
+            language = 'ja-JP';
+        }
+        else if (e.code === 'KeyZ') {
+            // https://segakuin.com/html/attribute/lang.html
+            language = 'zh-CN';
+        }
+        else if (e.code === 'KeyK') {
+            language = 'ko-KR';
+        }
+        languageDiv.innerHTML = 'lang: '+ language;
+    });
 });

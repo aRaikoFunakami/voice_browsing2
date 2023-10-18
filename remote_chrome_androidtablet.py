@@ -51,49 +51,54 @@ class RemoteTest:
 	"""
 	Numbering process for video selection aids
 	"""
-	# JavaScriptで半透明な丸と番号を作成
-	script_add_numbers_template = """
-	var circle = document.createElement('div');
-	circle.className = "video-number-circle"; 
-	var text = document.createElement('span');
-	circle.style.zIndex = "9999";
-	circle.style.fontSize = "36px"; 
-	circle.style.width = '60px';
-	circle.style.height = '60px';
-	circle.style.lineHeight = "48px";
-	circle.style.background = 'rgba(0, 128, 0, 0.5)';
-	circle.style.position = 'absolute';
-	circle.style.top = '{y}px';
-	circle.style.left = '{x}px';
-	circle.style.borderRadius = '50%';
-	circle.style.display = 'flex';
-	circle.style.justifyContent = 'center';
-	circle.style.alignItems = 'center';
-	text.innerHTML = '{i}';
-	text.style.color = 'white';
-	circle.appendChild(text);
-	document.body.appendChild(circle);
-	"""
 
 	def add_numbers_to_videos_for_youtube(self, driver):
 		try:
+			logging.info("start WebDriverWait")
 			WebDriverWait(driver, 10).until(
-				#EC.presence_of_element_located((By.ID, f"video-title"))
 				EC.presence_of_element_located((By.XPATH, '//*[@id="thumbnail"]'))
 			)
-			#video_elements = driver.find_elements(By.ID, "video-title")
-			video_elements = driver.find_elements(By.XPATH, '//*[@id="thumbnail"]')
-			visible_elements = [element for element in video_elements if element.is_displayed()]
-
-			for i, video in enumerate(visible_elements):
-				x, y = video.location["x"], video.location["y"]
-				script = self.script_add_numbers_template.format(x=x, y=y, i=i)
-				driver.execute_script(script, video)
+			# call javascript directly because taking time for seach id
+			script_add_numbers_template = """
+			var elements = document.querySelectorAll('[id="thumbnail"]');
+			Array.from(elements).forEach(function(el, index) {
+				var x = el.getBoundingClientRect().left + window.scrollX;
+				var y = el.getBoundingClientRect().top + window.scrollY;
+				var isDisplayed = !(el.offsetWidth === 0 && el.offsetHeight === 0);
+				if (isDisplayed) {
+					var circle = document.createElement('div');
+					circle.className = "video-number-circle"; 
+					var text = document.createElement('span');
+					circle.style.zIndex = "9999";
+					circle.style.fontSize = "36px"; 
+					circle.style.width = '60px';
+					circle.style.height = '60px';
+					circle.style.lineHeight = "48px";
+					circle.style.background = 'rgba(0, 128, 0, 0.5)';
+					circle.style.position = 'absolute';
+					circle.style.top = '0' + 'px';
+					circle.style.left = '0' + 'px';
+					circle.style.borderRadius = '50%';
+					circle.style.display = 'flex';
+					circle.style.justifyContent = 'center';
+					circle.style.alignItems = 'center';
+					text.innerHTML = index;
+					text.style.color = 'white';
+					circle.appendChild(text);
+					el.appendChild(circle);
+					console.log(x, y, index);
+				}
+			});
+			"""
+			logging.info("Start executing script to add numbers to video thumbnails.")
+			driver.execute_script(script_add_numbers_template)
+			logging.info("Numbers added to video thumbnails successfully.")
+			return "Videos found."
 		except TimeoutException:
 			logging.error("Timed out waiting for input or textarea elements to load.")
 			return "videos are not found"
 
-		return "The search was successful. Please ask Human to select links."
+
 
 	def add_numbers_to_videos_common(
 		self, driver, locator, condition_func, script_template
@@ -118,11 +123,10 @@ class RemoteTest:
 				script = script_template.format(x=x + 15, y=y, i=i)
 				logging.info(f"(x, y) = ({x}, {y})")
 				driver.execute_script(script, video)
+				return "Videos found."
 		except TimeoutException:
 			logging.error("Timed out waiting for input or textarea elements to load.")
 			return "videos are not found"
-
-		return "The search was successful. Please ask Human to select links."
 
 	def add_numbers_to_videos(self, driver):
 		url = self.get_current_url()
@@ -185,7 +189,7 @@ class RemoteTest:
 				self.driver.get(goto_url)
 				time.sleep(1)
 				return self.add_numbers_to_videos(self.driver)
-		return "This is the nsupported Web site."
+		return "This is the unsupported Web site."
 
 	"""
 	Select the link (video) of the selected number
@@ -201,32 +205,32 @@ class RemoteTest:
 		# 選択したビデオをクリック
 		self.driver.execute_script("arguments[0].scrollIntoView();", link)
 		self.driver.execute_script("arguments[0].click();", link)
+		return
 
-	def select_video_youtube(self, num):
-		logging.info(f"num = {num}")
+	def select_link_youtube(self, num):
+		logging.info(f"Selecting video link number: {num}")
 		try:
-			# 動画のリンクを取得（例として最初の動画）
-			WebDriverWait(self.driver, 10).until(
-				EC.presence_of_element_located((By.XPATH, '//*[@id="thumbnail"]'))
-			)
-			video_elements = self.driver.find_elements(By.XPATH, '//*[@id="thumbnail"]')
-			visible_elements = [element for element in video_elements if element.is_displayed()]
+			# ビデオリンクの取得
+			video_element = WebDriverWait(self.driver, 10).until(
+				EC.presence_of_all_elements_located((By.XPATH, '//*[@id="thumbnail"]'))
+			)[num]
 
-			self.click_link(visible_elements[num])
-			# クリック先でリンク番号を追加
-			# 非同期処理のため WebDriverWait では正常に動作しない
-			time.sleep(2)
-			WebDriverWait(self.driver, 10).until(
-				EC.presence_of_element_located((By.XPATH, '//*[@id="thumbnail"]'))
-			)
-			self.add_numbers_to_videos(self.driver)
+			# error check
+			if not video_element.is_displayed():
+				raise Exception(f"Video element number {num} is not visible.")
+
+			# elect link
+			self.click_link(video_element)
+
+			# add numbers at the next page after clicking the link
+			time.sleep(3)
+			return self.add_numbers_to_videos(self.driver)
 		except Exception as e:
-			logging.error(f"An error occurred: {e}")
-			return f"Playback of the selected video has not started."
+			logging.error(f"Error selecting video link: {e}")
+			return f"Failed to move to selected linked content."
 
-		return f"Playback of the selected video has started."
 
-	def select_video_common(self, num, locator, condition_func):
+	def select_link_common(self, num, locator, condition_func):
 		try:
 			WebDriverWait(self.driver, 10).until(
 				EC.presence_of_element_located(locator)
@@ -246,9 +250,9 @@ class RemoteTest:
 			self.add_numbers_to_videos(self.driver)
 		except Exception as e:
 			logging.error(f"An error occurred: {e}")
-			return f"Error"
+			return f"Move to selected linked content failed."
 
-		return f"The search was successful. Please ask Human to select links."
+		return f"You have navigated to the content of the link you selected."
 
 	def select_link_by_number(self, num: int) -> str:
 		"""
@@ -268,15 +272,15 @@ class RemoteTest:
 				lambda href: href is not None,
 			)
 		elif "youtube.com" in url:
-			return self.select_video_youtube(num)
+			return self.select_link_youtube(num)
 		elif "animestore.docomo.ne.jp" in url:
-			return self.select_video_common(
+			return self.select_link_common(
 				num,
 				(By.XPATH, "//a[descendant::img]"),
 				lambda href: href is not None,
 			)
 		elif "amazon.co.jp" in url:
-			return self.select_video_common(
+			return self.select_link_common(
 				num,
 				(By.XPATH, "//a[descendant::img]"),
 				lambda href: href is not None and "instant-video" in href,

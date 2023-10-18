@@ -1,13 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>音声テキスト化</title>
+    <title>Voice Browsing2</title>
     <script defer src="./hark.bundle.js"></script>
     <script defer src="./script.js"></script>
+    <style>
+        /* 以下のスタイルで全体の要素を中央に整列します */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh; /* viewportの高さに合わせる */
+        }
+        /* imgタグのマージンを調整 */
+        #toggleRecording {
+            margin-bottom: 20px; /* 任意の値に調整可能 */
+        }
+    </style>
 </head>
 <body>
-    <h1>音声テキスト化</h1>
+    <h1>Voice Browsing2</h1>
     <img id="toggleRecording" src="mic_ready.png" data-state="inactive" style="cursor: pointer;">
-    <div id="transcription"></div>
+    <div id="language">language: default is japanese</div><br />
+    <div > e: english, j: japanese, k: Korean, z: chinese</div><br />
+    <div id="transcription">音声認識されたテキスト</div><br/>
+    <div id="response">ChatGPTの回答</div>
 </body>
 </html>
