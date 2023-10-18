@@ -1,5 +1,0 @@
-[2023-10-18 11:08:13,826] [64326] [INFO] [remote_chrome_androidtablet.py:137 add_numbers_to_videos] [url: https://www.youtube.com/results?search_query=%E5%AF%8C%E5%A3%AB%E5%B1%B1]
-[2023-10-18 11:08:13,826] [64326] [INFO] [remote_chrome_androidtablet.py:80 add_numbers_to_videos_for_youtube] [start WebDriverWait]
-[2023-10-18 11:08:14,585] [64326] [INFO] [remote_chrome_androidtablet.py:85 add_numbers_to_videos_for_youtube] [start find_elements]
-[2023-10-18 11:08:23,684] [64326] [INFO] [remote_chrome_androidtablet.py:90 add_numbers_to_videos_for_youtube] [start making script]
-[2023-10-18 11:08:35,079] [64326] [INFO] [remote_chrome_androidtablet.py:97 add_numbers_to_videos_for_youtube] [start script]
