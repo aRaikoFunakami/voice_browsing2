@@ -11,15 +11,22 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib.parse import quote
 
-
+android_tablet = False
 
 class RemoteTest:
 	def __init__(self):
+		global android_tablet
+		self.lang_id = 'ja'
 		options = webdriver.ChromeOptions()
-		chromedriver = os.path.abspath('./chromedriver/M116/chromedriver')
-		options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
-		options.add_experimental_option('androidPackage', 'com.android.chrome')
-		self.driver = webdriver.Chrome(service=ChromeService(chromedriver), options=options)
+		if(android_tablet == True):
+			chromedriver = os.path.abspath('./chromedriver/M116/chromedriver')
+			options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
+			options.add_experimental_option('androidPackage', 'com.android.chrome')
+			self.driver = webdriver.Chrome(service=ChromeService(chromedriver), options=options)
+			return
+		else:
+			# PC
+			self.driver = webdriver.Chrome(options=options)
 
 	def __del__(self):
 		if self.driver:
@@ -93,7 +100,11 @@ class RemoteTest:
 			logging.info("Start executing script to add numbers to video thumbnails.")
 			driver.execute_script(script_add_numbers_template)
 			logging.info("Numbers added to video thumbnails successfully.")
-			return "Videos found."
+			if(self.lang_id != 'ja'):
+				response = "Moved to the link."
+			else:
+				response = "リンク先に移動しました"
+			return response
 		except TimeoutException:
 			logging.error("Timed out waiting for input or textarea elements to load.")
 			return "videos are not found"
@@ -164,7 +175,7 @@ class RemoteTest:
 	input: search string
 	"""
 
-	def search_by_query(self, url: str, input: str):
+	def search_by_query(self, url: str, input: str, lang_id: str = 'ja'):
 		"""
 		Called from function call of Open AI
 		Args:
@@ -173,7 +184,8 @@ class RemoteTest:
 		Returns:
 										str: Answer about the results of clicking on the link.
 		"""
-		logging.info(f" url = {url}, input = {input}")
+		logging.info(f" url = {url}, input = {input}, lang_id = {lang_id}")
+		self.lang_id = lang_id
 		search_queries = {
 			"google.com": "https://www.google.com/search?tbm=vid&q=",
 			"youtube.com": "https://www.youtube.com/results?search_query=",
@@ -254,7 +266,7 @@ class RemoteTest:
 
 		return f"You have navigated to the content of the link you selected."
 
-	def select_link_by_number(self, num: int) -> str:
+	def select_link_by_number(self, num: int, lang_id: str = 'ja') -> str:
 		"""
 		Called from function call of Open AI
 		Args:
@@ -262,6 +274,7 @@ class RemoteTest:
 		Returns:
 										str: Answer about the results of clicking on the link
 		"""
+		self.lang_id = lang_id
 		url = self.get_current_url()
 		logging.info(f"num = {num}, url = {url}")
 

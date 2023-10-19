@@ -4,6 +4,7 @@ from typing import Any, Type
 from pydantic import BaseModel, Field
 import threading
 import queue
+import langid
 
 #
 # LangChain related test codes
@@ -23,6 +24,7 @@ from remote_chrome_androidtablet import RemoteTest
 
 model_name = "gpt-3.5-turbo-0613"
 test = None
+lang_id = 'ja'
 
 # play next video
 class PlayNextVideoInput(BaseModel):
@@ -159,10 +161,11 @@ class SelectLinkByNumber(BaseTool):
     name = "select_link_by_number"
     description = "Use this function to select the link you want to select by number"
     args_schema: Type[BaseModel] = SelectLinkByNumberInput
+    return_direct = True #Tool returns output directly
 
     def _run(self, num: int):
         logging.info(f"num = {num}")
-        response = test.select_link_by_number(num=num)
+        response = test.select_link_by_number(num=num, lang_id=lang_id)
         logging.info(f"response: {response}")
         return response
 
@@ -182,10 +185,11 @@ class SearchByQuery(BaseTool):
     name = "search_by_query"
     description = "You use this function when you want to search in the text field of a Web page. "
     args_schema: Type[BaseModel] = SearchByQueryInput
+    return_direct = True #Tool returns output directly
 
     def _run(self, url: str, input: str):
         logging.info(f" url = {url}, input = {input}")
-        response = test.search_by_query(url=url, input=input)
+        response = test.search_by_query(url=url, input=input, lang_id=lang_id)
         logging.info(f"response: {response}")
         return response
 
@@ -290,11 +294,15 @@ class SimpleConversationRemoteChat:
 
     def llm_thread(self, g, user_message):
         try:
+            global lang_id
+            lang_id = langid.classify(user_message)[0]
             logging.info(f"memory: {self.memory}")
+            logging.info(f"lang_id: {lang_id}")
 
             llm = ChatOpenAI(
                 temperature=0,
                 model=model_name,
+                request_timeout=15,
             )
 
             agent_chain = initialize_agent(
