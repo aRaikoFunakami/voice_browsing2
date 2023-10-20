@@ -11,24 +11,51 @@ import langid
 #
 from langchain.agents import initialize_agent
 from langchain.agents import AgentType
-from langchain.prompts import MessagesPlaceholder
+from langchain.prompts import MessagesPlaceholder, PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.chat_models import ChatOpenAI
 from langchain.tools import BaseTool
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 
 # init openai
 import config
-#from remote_chrome import RemoteTest
+
+# from remote_chrome import RemoteTest
 from remote_chrome_androidtablet import RemoteTest
 
 model_name = "gpt-3.5-turbo-0613"
 test = None
-lang_id = 'ja'
+lang_id = "ja"
+
+
+# playlistを再生する
+class PlayVideoInPlaylistInput(BaseModel):
+    num: int = Field(
+        descption="Select the video to be played from the playlist by number."
+    )
+
+
+class PlayVideoInPlaylist(BaseTool):
+    name = "play_video_in_playlist"
+    description = "Use this function to play a video in the play list."
+    args_schema: Type[BaseModel] = PlayVideoInPlaylistInput
+    return_direct = False  # if True, Tool returns output directly
+
+    def _run(self, num: int):
+        logging.info(f"num = {num}")
+        response = test.play_video_in_playlist(num=num, lang_id=lang_id)
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
 
 # play next video
 class PlayNextVideoInput(BaseModel):
     nextvideo: str = Field(descption="Play the next video while playing a video.")
+
 
 class PlayNextVideo(BaseTool):
     name = "play_next_video"
@@ -44,9 +71,13 @@ class PlayNextVideo(BaseTool):
     def _arun(self, ticker: str):
         raise NotImplementedError("not support async")
 
+
 # play previous video
 class PlayPreviousVideoInput(BaseModel):
-    previousvideo: str = Field(descption="Play the previous video while playing a video.")
+    previousvideo: str = Field(
+        descption="Play the previous video while playing a video."
+    )
+
 
 class PlayPreviousVideo(BaseTool):
     name = "play_previous_video"
@@ -62,9 +93,13 @@ class PlayPreviousVideo(BaseTool):
     def _arun(self, ticker: str):
         raise NotImplementedError("not support async")
 
+
 # Fullscreen
 class FullscreenInput(BaseModel):
-    fullscreen: bool = Field(descption="Toggle fullscreen and normal screen while playing a video.")
+    fullscreen: bool = Field(
+        descption="Toggle fullscreen and normal screen while playing a video."
+    )
+
 
 class Fullscreen(BaseTool):
     name = "fullscreen"
@@ -80,13 +115,19 @@ class Fullscreen(BaseTool):
     def _arun(self, ticker: str):
         raise NotImplementedError("not support async")
 
+
 # FastPlayback
 class FastForwardPlaybackInput(BaseModel):
-    fastforward: str = Field(descption="Reduce the video playback speed while playing a video.")
+    fastforward: str = Field(
+        descption="Reduce the video playback speed while playing a video."
+    )
+
 
 class FastForwardPlayback(BaseTool):
     name = "fast_forward_playback"
-    description = "Use this function to reduce the video playback speed while playing a video."
+    description = (
+        "Use this function to reduce the video playback speed while playing a video."
+    )
     args_schema: Type[BaseModel] = FastForwardPlaybackInput
 
     def _run(self, fastforward: str):
@@ -98,13 +139,19 @@ class FastForwardPlayback(BaseTool):
     def _arun(self, ticker: str):
         raise NotImplementedError("not support async")
 
+
 # SlowPlayback
 class SlowForwardPlaybackInput(BaseModel):
-    slowforward: str = Field(descption="Reduce the video playback speed while playing a video.")
+    slowforward: str = Field(
+        descption="Reduce the video playback speed while playing a video."
+    )
+
 
 class SlowForwardPlayback(BaseTool):
     name = "slow_forward_playback"
-    description = "Use this function to reduce the video playback speed while playing a video."
+    description = (
+        "Use this function to reduce the video playback speed while playing a video."
+    )
     args_schema: Type[BaseModel] = SlowForwardPlaybackInput
 
     def _run(self, slowforward: str):
@@ -116,9 +163,11 @@ class SlowForwardPlayback(BaseTool):
     def _arun(self, ticker: str):
         raise NotImplementedError("not support async")
 
+
 # Mute
 class MuteInput(BaseModel):
     mute: bool = Field(descption="Toggle mute and unmute while playing a video.")
+
 
 class Mute(BaseTool):
     name = "mute"
@@ -134,9 +183,13 @@ class Mute(BaseTool):
     def _arun(self, ticker: str):
         raise NotImplementedError("not support async")
 
+
 # Play or Suspend
 class PlaySuspendInput(BaseModel):
-    playback_or_suspend: str = Field(descption="Toggle pause and playback while playing a video")
+    playback_or_suspend: str = Field(
+        descption="Toggle pause and playback while playing a video"
+    )
+
 
 class PlaySuspend(BaseTool):
     name = "play_suspend"
@@ -152,6 +205,7 @@ class PlaySuspend(BaseTool):
     def _arun(self, ticker: str):
         raise NotImplementedError("not support async")
 
+
 # 動画を番号で選択する
 class SelectLinkByNumberInput(BaseModel):
     num: int = Field(descption="Select the link you want to select by number")
@@ -161,7 +215,7 @@ class SelectLinkByNumber(BaseTool):
     name = "select_link_by_number"
     description = "Use this function to select the link you want to select by number"
     args_schema: Type[BaseModel] = SelectLinkByNumberInput
-    return_direct = True #Tool returns output directly
+    return_direct = True  # Tool returns output directly
 
     def _run(self, num: int):
         logging.info(f"num = {num}")
@@ -185,7 +239,7 @@ class SearchByQuery(BaseTool):
     name = "search_by_query"
     description = "You use this function when you want to search in the text field of a Web page. "
     args_schema: Type[BaseModel] = SearchByQueryInput
-    return_direct = True #Tool returns output directly
+    return_direct = True  # Tool returns output directly
 
     def _run(self, url: str, input: str):
         logging.info(f" url = {url}, input = {input}")
@@ -228,6 +282,7 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 class SimpleConversationRemoteChat:
     tools = [
+        PlayVideoInPlaylist(),
         PlayNextVideo(),
         PlayPreviousVideo(),
         Fullscreen(),
@@ -240,28 +295,28 @@ class SimpleConversationRemoteChat:
     ]
     prompt_init = """
 	You are helping humans by manipulating the browser with chatgpt functions in natural language.
-    Follow the instructions in markdown format below
+	Follow the instructions in markdown format below
 
 	# Restrictions
-    ## Language
-    - Respond in the same language as the input text
-    - Prefer to use websites in the same language as the language of the input
-    ## Response
+	## Language
+	- Respond in the same language as the input text
+	- Prefer to use websites in the same language as the language of the input
+	## Response
  	- You are chatting with a user via the ChatGPT voice app. For this reason, in most cases your response should be one or two sentences. However, unless the user's request requires inference or longer output. Do not use characters that cannot be pronounced.
-    - To search for videos in a situation where you are not navigating to the video search page, search for videos on youtube. youtube's URL is "https://www.youtube.com".
+	- To search for videos in a situation where you are not navigating to the video search page, search for videos on youtube. youtube's URL is "https://www.youtube.com".
 	- In order to keep the answers brief, detailed explanations will not be given until asked. For example, "What are the sights in Sakuragicho?" I will answer the name of the sightseeing spot, but not the details until I am asked.
-    - Use the function to select links by number if only numbers are entered.
+	- Use the function to select links by number if only numbers are entered.
 	- If you don't know, say you don't know.
 	- Do not lie.
 	- Minimal talk, no superfluous words.
-    ## Function Call
-    - Use function call in the following cases
-    -- Searching for videos
-    -- Pause a video
-    -- Play or resume video
+	## Function Call
+	- Use function call in the following cases
+	-- Searching for videos
+	-- Pause a video
+	-- Play or resume video
 
 	# Combination of web sites and URLs to search
-    - Use the following site/URL combination to search for videos
+	- Use the following site/URL combination to search for videos
 	{
 		"Amazon Prime Japan" : "https://www.amazon.co.jp/gp/browse.html?node=2351649051&ref_=nav_em__aiv_vid_0_2_2_2",.
 		"dアニメ" : "https://animestore.docomo.ne.jp/animestore/CF/search_index",
@@ -296,13 +351,13 @@ class SimpleConversationRemoteChat:
         try:
             global lang_id
             lang_id = langid.classify(user_message)[0]
-            logging.info(f"memory: {self.memory}")
+            logging.debug(f"memory: {self.memory}")
             logging.info(f"lang_id: {lang_id}")
 
             llm = ChatOpenAI(
                 temperature=0,
                 model=model_name,
-                request_timeout=15,
+                # request_timeout=15,
             )
 
             agent_chain = initialize_agent(
@@ -313,7 +368,16 @@ class SimpleConversationRemoteChat:
                 agent_kwargs=self.agent_kwargs,
                 memory=self.memory,
             )
-            return agent_chain.run(input=user_message)
+            response = agent_chain.run(input=user_message)
+
+            try:
+                json_response = json.loads(response)
+                if json_response["type"] == "video_list":
+                    response = agent_chain.run(input="プレイリストの0番の動画を再生しなさい")
+            except json.JSONDecodeError as e:
+                logging.error(f"you can ignor this error: JSON decode error: {e}")
+
+            return response
         finally:
             g.close()
 
