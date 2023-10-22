@@ -2,7 +2,6 @@ import os
 import logging
 import time
 import json
-import threading
 from typing import Any
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -12,6 +11,9 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib.parse import quote
+from youtube_autoplay import YouTube_AutoPlay
+from youtube_adskip import YouTube_Adskip
+
 
 android_tablet = False
 youtube_playlist = True
@@ -23,6 +25,7 @@ class RemoteTest:
         self.lang_id = "ja"
         self.playlist = []
         self.playlist_mode = False
+        self.youtube_autoplay_thread  = None
         options = webdriver.ChromeOptions()
         if android_tablet == True:
             chromedriver = os.path.abspath("./chromedriver/M116/chromedriver")
@@ -37,8 +40,15 @@ class RemoteTest:
         else:
             # PC
             self.driver = webdriver.Chrome(options=options)
+        #youtube AdSkip thread
+        self.youtube_adskip_thread = YouTube_Adskip(driver=self.driver)
+        self.youtube_adskip_thread.start()
 
     def __del__(self):
+        if(self.youtube_adskip_thread is not None):
+            self.youtube_adskip_thread.cancel()
+        if(self.youtube_autoplay_thread is not None):
+            self.youtube_autoplay_thread.cancel()
         if self.driver:
             self.driver.quit()
 
@@ -182,96 +192,11 @@ class RemoteTest:
 	url : VOD service to search for
 	input: search string
 	"""
-
-    def play_video_in_playlist_after_current_video(self, num: int, current_url: str):
-        try:
-            logging.info(f"num: {num}")
-            logging.info(f"self.driver.current_url: {self.driver.current_url}")
-            logging.info(f"current_url: {current_url}")
-            is_url = WebDriverWait(self.driver, 60 * 120).until(
-                EC.url_changes(self.driver.current_url)
-            )
-            logging.info(f"self.driver.current_url: {self.driver.current_url}")
-            """
-			BUG: play_video_in_playlist MUST NOT calle if user controled the browser
-				 if self.playlist_mode == True: doens't work well.
-				 need to send a message for each Thread not to call play_video_in_playlist
-   			"""
-            if self.playlist_mode == True:
-                self.play_video_in_playlist(int(num) + 1)
-            return f"play the new video"
-        except Exception as e:
-            logging.error(f"WebDriverWait: {e}")
-            return f"Failed to play the video"
-
-    def overlay_auto_playback_titles_hide(self):
-        self.playlist_mode = False
-        try:
-            if self.driver.execute_script(
-                "return document.getElementById('overlay') !== null;"
-            ):
-                self.driver.execute_script(
-                    "document.getElementById('overlay').remove();"
-                )
-        except Exception as e:
-            logging.error(f"execute_script: {e}")
-
-    def overlay_auto_playback_titles(self, num):
-        self.playlist_mode = True
-        try:
-            list = self.playlist["list"]
-            titles = [i["title"] for i in list]
-            progress_titles = titles[num:]
-
-            # HTMLコンテンツを動的に生成
-            html_content = """
-			<div id="overlay" style="
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background-color: rgba(0, 0, 0, 0.7);
-				z-index: 9999;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-			">
-				<div style="
-					background-color: rgba(255, 255, 255, 0.7); 
-					padding: 20px;
-					width: 80%;
-				">
-					<div style="font-size: 32px;align-items: center;">Auto Playback mode</h1>
-					<div style="font-size: 26px;align-items: center;">{}</h1>
-					<div style="font-size: 24px;align-items: center;">Playback List</h3>
-					<ul style="font-size: 20px; padding-left:20px">
-						{}
-					</ul>
-				</div>
-			</div>
-			""".format(
-                progress_titles[0],
-                "\n".join("<li>{}</li>".format(title) for title in progress_titles),
-            )
-            self.driver.execute_script(
-                "document.body.insertAdjacentHTML('beforeend', arguments[0]);",
-                html_content,
-            )
-        except Exception as e:
-            logging.error(f"execute_script: {e}")
-
     def play_video_in_playlist(self, num, lang_id="ja"):
         logging.info(f"num: {num}, playlist: {self.playlist}")
         try:
-            url = self.playlist["list"][num]["url"]
-            self.driver.get(url)
-            time.sleep(2)
-            self.overlay_auto_playback_titles(num)
-            thread = threading.Thread(
-                target=self.play_video_in_playlist_after_current_video, args=(num, url)
-            )
-            thread.start()
+            self.youtube_autoplay_thread = YouTube_AutoPlay(driver=self.driver, playlist=self.playlist, playnumber=num, overlay=True)
+            self.youtube_autoplay_thread.start()
             return "プレイリストの動画を再生します"
         except Exception as e:
             logging.error(f"Error selecting video link: {e}")
@@ -313,7 +238,9 @@ class RemoteTest:
         """
         Called from function call of Open AI
         """
-        self.overlay_auto_playback_titles_hide()
+        if(self.youtube_autoplay_thread is not None):
+            self.youtube_autoplay_thread.cancel()
+            self.youtube_autoplay_thread = None
 
         logging.info(f" url = {url}, input = {input}, lang_id = {lang_id}")
         self.lang_id = lang_id
@@ -404,7 +331,9 @@ class RemoteTest:
         """
         Called from function call of Open AI
         """
-        self.overlay_auto_playback_titles_hide()
+        if(self.youtube_autoplay_thread is not None):
+            self.youtube_autoplay_thread.cancel()
+            self.youtube_autoplay_thread = None
 
         self.lang_id = lang_id
         url = self.get_current_url()
@@ -555,7 +484,9 @@ class RemoteTest:
         """
         Called from function call of Open AI
         """
-        self.overlay_auto_playback_titles_hide()
+        if(self.youtube_autoplay_thread is not None):
+            self.youtube_autoplay_thread.cancel()
+            self.youtube_autoplay_thread = None
 
         url = self.get_current_url()
         logging.info(f"url = {url}")
@@ -570,7 +501,9 @@ class RemoteTest:
         """
         Called from function call of Open AI
         """
-        self.overlay_auto_playback_titles_hide()
+        if(self.youtube_autoplay_thread is not None):
+            self.youtube_autoplay_thread.cancel()
+            self.youtube_autoplay_thread = None
 
         url = self.get_current_url()
         logging.info(f"url = {url}")
