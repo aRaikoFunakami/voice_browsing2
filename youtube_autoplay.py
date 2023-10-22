@@ -8,8 +8,11 @@ from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+
 class YouTube_AutoPlay(threading.Thread):
-    def __init__(self, driver: webdriver, playlist: [], playnumber: int, overlay: bool = False):
+    def __init__(
+        self, driver: webdriver, playlist: [], playnumber: int, overlay: bool = True
+    ):
         super().__init__()
         self.driver = driver
         self.playlist = playlist
@@ -30,44 +33,41 @@ class YouTube_AutoPlay(threading.Thread):
             logging.error(f"execute_script: {e}")
 
     def _overlay_titles(self, num):
-        if(self.overlay == False):
+        if self.overlay == False:
             return
         try:
             list = self.playlist["list"]
             titles = [i["title"] for i in list]
             progress_titles = titles[num:]
 
-            # HTMLコンテンツを動的に生成
             html_content = """
-			<div id="overlay" style="
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background-color: rgba(0, 0, 0, 0.7);
-				z-index: 9999;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-			">
-				<div style="
-					background-color: rgba(255, 255, 255, 0.7); 
-					padding: 20px;
-					width: 80%;
-				">
-					<div style="font-size: 32px;align-items: center;">Auto Playback mode</h1>
-					<div style="font-size: 26px;align-items: center;">{}</h1>
-					<div style="font-size: 24px;align-items: center;">Playback List</h3>
-					<ul style="font-size: 20px; padding-left:20px">
-						{}
-					</ul>
-				</div>
-			</div>
-			""".format(
-                progress_titles[0],
-                "\n".join("<li>{}</li>".format(title) for title in progress_titles),
+                <div id="overlay" style="
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 30%;
+                    background-color: rgba(0, 0, 0, 0.7);
+                    z-index: 9999;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                ">
+                    <div style="
+                        background-color: rgba(255, 255, 255, 0.7); 
+                        padding: 20px;
+                        width: 80%;
+                        text-align: center;
+                    ">
+                        <div style="font-size: 32px;">Now Playing: {}</div>
+                        <div style="font-size: 26px;">Up Next: {}</div>
+                    </div>
+                </div>
+            """.format(
+                progress_titles[0],  # 現在のタイトル
+                progress_titles[1] if len(progress_titles) > 1 else "None"  # 次のタイトル（存在する場合）
             )
+
             self.driver.execute_script(
                 "document.body.insertAdjacentHTML('beforeend', arguments[0]);",
                 html_content,
@@ -77,8 +77,10 @@ class YouTube_AutoPlay(threading.Thread):
 
     def _play_next_video(self):
         try:
-            WebDriverWait(self.driver, 60).until(EC.url_changes(self.driver.current_url))
-            if(self.cancel == True):
+            WebDriverWait(self.driver, 60).until(
+                EC.url_changes(self.driver.current_url)
+            )
+            if self.cancel == True:
                 return
             self._play()
         except Exception as e:
@@ -91,8 +93,8 @@ class YouTube_AutoPlay(threading.Thread):
             url = self.playlist["list"][num]["url"]
             self.driver.get(url)
             self.playnumber += 1
-            self._overlay_titles(num)
             time.sleep(2)
+            self._overlay_titles(num)
         except Exception as e:
             logging.error(f"Error selecting video link: {e}")
 
@@ -192,7 +194,7 @@ def main():
     driver = webdriver.Chrome(options=options)
     driver.get("https://www.youtube.com")
     time.sleep(2)
-    
+
     # dummy operation for automatic video playback
     driver.execute_script("window.scrollBy(0, 100);")
     time.sleep(2)
@@ -202,6 +204,7 @@ def main():
     # finish
     autoplay_thread.join()
     time.sleep(2)
+
 
 if __name__ == "__main__":
     main()
