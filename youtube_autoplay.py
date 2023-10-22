@@ -63,6 +63,18 @@ class YouTube_AutoPlay(threading.Thread):
                         <div style="font-size: 26px;">Up Next: {}</div>
                     </div>
                 </div>
+                <div style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 70%;
+                    background-color: rgba(0, 0, 0, 0.7);
+                    z-index: 9999;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                ">
             """.format(
                 progress_titles[0],  # 現在のタイトル
                 progress_titles[1] if len(progress_titles) > 1 else "None"  # 次のタイトル（存在する場合）
