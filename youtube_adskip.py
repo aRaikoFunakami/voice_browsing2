@@ -14,28 +14,29 @@ from selenium.webdriver.support.ui import WebDriverWait
 class YouTube_Adskip(threading.Thread):
 	def __init__(self, driver: webdriver):
 		super().__init__()
+		self.daemon = True
 		self.driver = driver
 		self.thread_id = uuid.uuid4() 
 		self.cancel = False
 
 	def _adskip(self):
 		try:
-			logging.info(f"waiting Adskip")
+			logging.debug(f"waiting Adskip")
 			skip_button = WebDriverWait(self.driver, 60).until(
 				EC.presence_of_element_located((By.CSS_SELECTOR, ".ytp-ad-skip-button.ytp-button"))
 			)
 			skip_button.click()
 		except TimeoutException as e:
-			logging.info("Timeout: Skip button was not found within the time limit: {e}")
+			logging.error("Timeout: Skip button was not found within the time limit: {e}")
 		except Exception as e:
-			logging.info("click error: {e}")
+			logging.error("click error: {e}")
 
 	def run(self):
 		while True:
 			if self.cancel == True:
-				logging.info(f"Stopping thread {self.thread_id}.")
+				logging.debug(f"Stopping thread {self.thread_id}.")
 				break
-			logging.info(
+			logging.debug(
 				f"Thread {self.thread_id} received cancel_message: {self.cancel}"
 			)
 			self._adskip()
@@ -45,7 +46,7 @@ class YouTube_Adskip(threading.Thread):
 		self.cancel = True
 
 	def __del__(self):
-		logging.info(f"Destructor called for thread {self.thread_id}, cleaning up...")
+		logging.debug(f"Destructor called for thread {self.thread_id}, cleaning up...")
 
 
 def main():
