@@ -13,9 +13,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from urllib.parse import quote
 from youtube_autoplay import YouTube_AutoPlay
 from youtube_adskip import YouTube_Adskip
+import threading
 
-
-android_tablet = False
+#android_tablet = False
+android_tablet = True
 youtube_playlist = True
 
 
@@ -28,7 +29,7 @@ class RemoteTest:
         self.youtube_autoplay_thread  = None
         options = webdriver.ChromeOptions()
         if android_tablet == True:
-            chromedriver = os.path.abspath("./chromedriver/M116/chromedriver")
+            chromedriver = os.path.abspath("./chromedriver/M118/chromedriver")
             options.add_argument(
                 "--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
             )
@@ -36,6 +37,7 @@ class RemoteTest:
             self.driver = webdriver.Chrome(
                 service=ChromeService(chromedriver), options=options
             )
+            threading.Thread(target=self.set_start_url, args=("http://192.168.1.59:8080/launcher.html",)).start()
             return
         else:
             # PC
@@ -61,6 +63,11 @@ class RemoteTest:
             return self.current_url
         else:
             return self.driver.current_url
+        
+    def set_start_url(self, url):
+        time.sleep(1)
+        logging.info(url)
+        self.driver.get(url)
 
     """
 	Remove numbers for video selection aids
