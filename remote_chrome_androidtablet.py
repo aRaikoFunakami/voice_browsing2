@@ -13,14 +13,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from urllib.parse import quote
 from youtube_autoplay import YouTube_AutoPlay
 from youtube_adskip import YouTube_Adskip
-import threading
 
 #android_tablet = False
 android_tablet = True
 youtube_playlist = True
 
-
-class RemoteTest:
+class RemoteChrome:
     def __init__(self):
         global android_tablet
         self.lang_id = "ja"
@@ -37,7 +35,6 @@ class RemoteTest:
             self.driver = webdriver.Chrome(
                 service=ChromeService(chromedriver), options=options
             )
-            threading.Thread(target=self.set_start_url, args=("http://192.168.1.59:8080/launcher.html",)).start()
             return
         else:
             # PC
@@ -263,6 +260,7 @@ class RemoteTest:
             if domain in url:
                 goto_url = f"{query_url}{quote(input)}"
                 self.current_url = goto_url
+                logging.info(f"get({goto_url})")
                 self.driver.get(goto_url)
                 time.sleep(1)
                 # youtubeの場合のみ
@@ -528,12 +526,12 @@ class RemoteTest:
 
 if __name__ == "__main__":
     logging.basicConfig(
-        format="%(filename)s: %(levelname)s: %(funcName)s: %(message)s",
+        format="[%(asctime)s] [%(process)d] [%(levelname)s] [%(filename)s:%(lineno)d %(funcName)s] [%(message)s]",
         level=logging.INFO,
     )
-    test = RemoteTest()
+    test = RemoteChrome()
     test.start()
-    test.search_by_query("http://www.youtube.com", "フリーレン")
+    test.search_by_query("https://www.youtube.com", "フリーレン")
     time.sleep(1)
     test.select_link_by_number(1)
     time.sleep(1)
