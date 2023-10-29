@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import openai
 import os, json, tempfile
 import logging
-
+import threading
 import config
 from remote_chat import SimpleConversationRemoteChat
 
@@ -37,13 +37,31 @@ def upload_audio():
 def index():
     return render_template("index.html")
 
+def run_server():
+    app.run(host="0.0.0.0", port=8080, debug=True, use_reloader=False)
+
+def chat():
+    global remote_chat
+    chat = remote_chat
+    while True:
+        user_input = input("Enter the text to search (or 'exit' to quit): ")
+        if user_input.lower() == "exit":
+            break
+        chat.llm_run(user_input)
 
 if __name__ == "__main__":
     logging.basicConfig(
         format="[%(asctime)s] [%(process)d] [%(levelname)s] [%(filename)s:%(lineno)d %(funcName)s] [%(message)s]",
         level=logging.INFO,
     )
+    # Start the web server in a separate thread
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+
     openai.api_key = config.keys["openai_api_key"]
     remote_chat = SimpleConversationRemoteChat(history=None)
-    # app.run(debug=True)
-    app.run(host="0.0.0.0", port=8080, debug=True, use_reloader=False)
+    
+    # debug
+    chat()
+
+
