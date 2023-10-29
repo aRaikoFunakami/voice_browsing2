@@ -43,6 +43,11 @@ class LaunchApp(BaseTool):
         The argument application is a string specified by the adb command "adb shell am start -n".
         Example)
         - Chrome: "com.android.chrome/com.google.android.apps.chrome.Main"
+        - 動画再生: "com.android.chrome/com.google.android.apps.chrome.Main"
+        - YouTube: "com.android.chrome/com.google.android.apps.chrome.Main"
+        - Hulu: "com.android.chrome/com.google.android.apps.chrome.Main"
+        - dアニメ: "com.android.chrome/com.google.android.apps.chrome.Main"
+        - TVer: "com.android.chrome/com.google.android.apps.chrome.Main"
         - Google Maps: "com.google.android.apps.maps/com.google.android.maps.MapsActivity"
         - ナビ: "com.google.android.apps.maps/com.google.android.maps.MapsActivity"
         """
