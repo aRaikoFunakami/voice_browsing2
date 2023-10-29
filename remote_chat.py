@@ -23,13 +23,41 @@ import config
 
 # from remote_chrome import RemoteTest
 from remote_chrome import RemoteChrome
-from remote_intent import intent_googlenavigation
+from remote_intent import intent_googlenavigation, intent_application, intent_chrome, intent_googlemap
 
 LAUNCHER_HTML = "http://192.168.1.59:8080/launcher.html"
 model_name = "gpt-3.5-turbo-0613"
 test = None
 lang_id = "ja"
 
+
+# アプリに戻る
+class LaunchAppInput(BaseModel):
+    application: str = Field(descption="Specify the application.")
+
+
+class LaunchApp(BaseTool):
+    name = "intent_application"
+    description = (
+        """
+        The argument application is a string specified by the adb command "adb shell am start -n".
+        Example)
+        - Chrome: "com.android.chrome/com.google.android.apps.chrome.Main"
+        - Google Maps: "com.google.android.apps.maps/com.google.android.maps.MapsActivity"
+        - ナビ: "com.google.android.apps.maps/com.google.android.maps.MapsActivity"
+        """
+    )
+    args_schema: Type[BaseModel] = LaunchAppInput
+    return_direct = False  # if True, Tool returns output directly
+
+    def _run(self, application:str):
+        logging.info(f"application = {application}")
+        response = intent_application(application=application)
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
 
 # Googla Map Navigationを起動する
 class LaunchNavigationInput(BaseModel):
@@ -269,6 +297,7 @@ class SearchByQuery(BaseTool):
 
     def _run(self, url: str, input: str):
         logging.info(f" url = {url}, input = {input}")
+        intent_chrome()
         response = test.search_by_query(url=url, input=input, lang_id=lang_id)
         logging.info(f"response: {response}")
         return response
@@ -308,6 +337,7 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 class SimpleConversationRemoteChat:
     tools = [
+        LaunchApp(),
         LaunchNavigation(),
         PlayVideoInPlaylist(),
         PlayNextVideo(),
