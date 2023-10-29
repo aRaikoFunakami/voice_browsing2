@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 import threading
 import queue
 import langid
+from flask import Flask, render_template, request, jsonify
 
 #
 # LangChain related test codes
@@ -22,11 +23,38 @@ from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 import config
 
 # from remote_chrome import RemoteTest
-from remote_chrome_androidtablet import RemoteTest
+from remote_chrome_androidtablet import RemoteChrome
+from remote_intent import intent_googlenavigation
 
+LAUNCHER_HTML="http://192.168.1.59:8080/launcher.html"
 model_name = "gpt-3.5-turbo-0613"
 test = None
 lang_id = "ja"
+
+# Googla Map Navigationを起動する
+class LaunchNavigationInput(BaseModel):
+    latitude: float = Field(
+        descption="Specify the Latitude of the destination."
+    )
+    longitude: float = Field(
+        description="Specify the longitude of the destination"
+    )
+
+
+class LaunchNavigation(BaseTool):
+    name = "intent_googlenavigation"
+    description = "Use this function to provides route guidance to a specified location."
+    args_schema: Type[BaseModel] = LaunchNavigationInput
+    return_direct = False  # if True, Tool returns output directly
+
+    def _run(self, latitude: float, longitude: float ):
+        logging.info(f"lat, lon = {latitude}, {longitude}")
+        response = intent_googlenavigation(latitude=latitude, longitude=longitude)
+        logging.info(f"response: {response}")
+        return response
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
 
 
 # playlistを再生する
@@ -282,6 +310,7 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 class SimpleConversationRemoteChat:
     tools = [
+        LaunchNavigation(),
         PlayVideoInPlaylist(),
         PlayNextVideo(),
         PlayPreviousVideo(),
@@ -329,7 +358,8 @@ class SimpleConversationRemoteChat:
     def __init__(self, history):
         config.load()
         global test
-        test = RemoteTest()
+        test = RemoteChrome()
+        test.set_start_url(LAUNCHER_HTML)
         self.agent_kwargs = {
             "extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
         }
@@ -392,9 +422,26 @@ if __name__ == "__main__":
         format="[%(asctime)s] [%(process)d] [%(levelname)s] [%(filename)s:%(lineno)d %(funcName)s] [%(message)s]",
         level=logging.INFO,
     )
-    chat = SimpleConversationRemoteChat("")
-    while True:
-        user_input = input("Enter the text to search (or 'exit' to quit): ")
-        if user_input.lower() == "exit":
-            break
-        chat.llm_run(user_input)
+
+    app = Flask(__name__, static_folder="./templates", static_url_path="")
+    @app.route("/")
+    def index():
+        return render_template("index.html")
+
+    def run_server():
+        app.run(host="0.0.0.0", port=8080, debug=True, use_reloader=False)
+
+    def chat():
+        chat = SimpleConversationRemoteChat("")
+        while True:
+            user_input = input("Enter the text to search (or 'exit' to quit): ")
+            if user_input.lower() == "exit":
+                break
+            chat.llm_run(user_input)
+
+    # Start the web server in a separate thread
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+
+    # Run the chat in the main thread
+    chat()
