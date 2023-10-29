@@ -86,6 +86,7 @@ toggleButton.addEventListener('click', async () => {
             }
             window.speechSynthesis.speak(utterance);
 
+            console.log(`SpeechHandler.speakUtterance ${utterance}`)
             toggleButton.src = 'mic_ready.png';
             toggleButton.setAttribute('data-state', 'inactive');
             toggleButton.style.cursor = 'pointer';
