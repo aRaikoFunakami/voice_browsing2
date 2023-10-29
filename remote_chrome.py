@@ -33,7 +33,7 @@ class RemoteChrome:
             )
             options.add_experimental_option("androidPackage", "com.android.chrome")
             self.driver = webdriver.Chrome(
-                service=ChromeService(chromedriver), options=options
+                service=ChromeService(chromedriver), options=options, keep_alive=False
             )
         else:
             # PC
