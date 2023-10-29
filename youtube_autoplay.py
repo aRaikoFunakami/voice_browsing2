@@ -21,6 +21,7 @@ class YouTube_AutoPlay(threading.Thread):
         self.overlay = overlay
         self.thread_id = uuid.uuid4()
         self.cancel_flag = False
+        self.nextprevious_flag = False
 
     def __del__(self):
         logging.debug(f"Destructor called for thread {self.thread_id}, cleaning up...")
@@ -54,6 +55,7 @@ class YouTube_AutoPlay(threading.Thread):
                     height: 30%;
                     background-color: rgba(0, 0, 0, 0.7);
                     z-index: 9999;
+                    pointer-events: none;
                     display: flex;
                     justify-content: center;
                     align-items: center;
@@ -61,11 +63,11 @@ class YouTube_AutoPlay(threading.Thread):
                     <div style="
                         background-color: rgba(255, 255, 255, 0.7); 
                         padding: 20px;
-                        width: 80%;
+                        width: 70%;
                         text-align: center;
                     ">
-                        <div style="font-size: 32px;">Now Playing: {}</div>
-                        <div style="font-size: 26px;">Up Next: {}</div>
+                        <div style="font-size: 28px;">Now Playing: {}</div>
+                        <div style="font-size: 21px;">Up Next: {}</div>
                     </div>
                 </div>
                 <!---
@@ -93,6 +95,19 @@ class YouTube_AutoPlay(threading.Thread):
         except Exception as e:
             logging.error(f"execute_script: {e}")
 
+    def play_next_video(self):
+        logging.info(f"num: {self.playnumber}, playlist: {self.playlist}")
+        self.nextprevious_flag = True
+        self._play()
+        return
+
+    def play_previous_video(self):
+        logging.info(f"num: {self.playnumber}, playlist: {self.playlist}")
+        self.nextprevious_flag = True
+        self.playnumber -= 2
+        self._play()
+        return
+
     def _play_next_video(self):
         try:
             WebDriverWait(self.driver, 60).until(
@@ -100,12 +115,15 @@ class YouTube_AutoPlay(threading.Thread):
             )
             if self.cancel_flag == True:
                 return
+            if self.nextprevious_flag == True:
+                self.nextprevious_flag = False
+                return
             self._play()
         except Exception as e:
             logging.error(f"WebDriverWait: {e}")
 
     def _play(self):
-        logging.debug(f"num: {self.playnumber}, playlist: {self.playlist}")
+        logging.info(f"num: {self.playnumber}, playlist: {self.playlist}")
         try:
             num = self.playnumber
             url = self.playlist["list"][num]["url"]

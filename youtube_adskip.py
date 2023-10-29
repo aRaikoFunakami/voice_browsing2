@@ -25,6 +25,7 @@ class YouTube_Adskip(threading.Thread):
 			skip_button = WebDriverWait(self.driver, 60).until(
 				EC.presence_of_element_located((By.CSS_SELECTOR, ".ytp-ad-skip-button.ytp-button"))
 			)
+			logging.debug(f"Adskip!!!")
 			skip_button.click()
 		except TimeoutException as e:
 			logging.error("Timeout: Skip button was not found within the time limit: {e}")

@@ -1,5 +1,5 @@
 import json
-import os, logging
+import logging
 from typing import Any, Type
 from pydantic import BaseModel, Field
 import threading
@@ -12,12 +12,11 @@ from flask import Flask, render_template, request, jsonify
 #
 from langchain.agents import initialize_agent
 from langchain.agents import AgentType
-from langchain.prompts import MessagesPlaceholder, PromptTemplate
+from langchain.prompts import MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 from langchain.chat_models import ChatOpenAI
 from langchain.tools import BaseTool
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 
 # init openai
 import config
@@ -26,28 +25,27 @@ import config
 from remote_chrome import RemoteChrome
 from remote_intent import intent_googlenavigation
 
-LAUNCHER_HTML="http://192.168.1.59:8080/launcher.html"
+LAUNCHER_HTML = "http://192.168.1.59:8080/launcher.html"
 model_name = "gpt-3.5-turbo-0613"
 test = None
 lang_id = "ja"
 
+
 # Googla Map Navigationを起動する
 class LaunchNavigationInput(BaseModel):
-    latitude: float = Field(
-        descption="Specify the Latitude of the destination."
-    )
-    longitude: float = Field(
-        description="Specify the longitude of the destination"
-    )
+    latitude: float = Field(descption="Specify the Latitude of the destination.")
+    longitude: float = Field(description="Specify the longitude of the destination")
 
 
 class LaunchNavigation(BaseTool):
     name = "intent_googlenavigation"
-    description = "Use this function to provides route guidance to a specified location."
+    description = (
+        "Use this function to provides route guidance to a specified location."
+    )
     args_schema: Type[BaseModel] = LaunchNavigationInput
     return_direct = False  # if True, Tool returns output directly
 
-    def _run(self, latitude: float, longitude: float ):
+    def _run(self, latitude: float, longitude: float):
         logging.info(f"lat, lon = {latitude}, {longitude}")
         response = intent_googlenavigation(latitude=latitude, longitude=longitude)
         logging.info(f"response: {response}")
@@ -66,7 +64,7 @@ class PlayVideoInPlaylistInput(BaseModel):
 
 class PlayVideoInPlaylist(BaseTool):
     name = "play_video_in_playlist"
-    description = "Use this function to play a video in the play list."
+    description = "Use this function to play a video in the play list.The search results are saved as a playlist. Media playback is performed according to that playlist. The first media designation specifies 0; for the second, 1."
     args_schema: Type[BaseModel] = PlayVideoInPlaylistInput
     return_direct = False  # if True, Tool returns output directly
 
@@ -399,14 +397,14 @@ class SimpleConversationRemoteChat:
                 memory=self.memory,
             )
             response = agent_chain.run(input=user_message)
-
-            try:
-                json_response = json.loads(response)
-                if json_response["type"] == "video_list":
-                    response = agent_chain.run(input="プレイリストの0番の動画を再生しなさい")
-            except json.JSONDecodeError as e:
-                logging.error(f"you can ignor this error: JSON decode error: {e}")
-
+            """
+			try:
+				json_response = json.loads(response)
+				if json_response["type"] == "video_list":
+					response = agent_chain.run(input="プレイリストの0番の動画を再生しなさい")
+			except json.JSONDecodeError as e:
+				logging.error(f"you can ignor this error: JSON decode error: {e}")
+			"""
             return response
         finally:
             g.close()
@@ -424,6 +422,7 @@ if __name__ == "__main__":
     )
 
     app = Flask(__name__, static_folder="./templates", static_url_path="")
+
     @app.route("/")
     def index():
         return render_template("index.html")

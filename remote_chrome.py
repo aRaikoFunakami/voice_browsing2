@@ -35,7 +35,6 @@ class RemoteChrome:
             self.driver = webdriver.Chrome(
                 service=ChromeService(chromedriver), options=options
             )
-            return
         else:
             # PC
             self.driver = webdriver.Chrome(options=options)
@@ -201,7 +200,7 @@ class RemoteChrome:
         try:
             self.youtube_autoplay_thread = YouTube_AutoPlay(driver=self.driver, playlist=self.playlist, playnumber=num, overlay=True)
             self.youtube_autoplay_thread.start()
-            return "プレイリストの動画を再生します"
+            return f"プレイリストの{num}番目の動画{self.playlist['list'][num]['title']}を再生します"
         except Exception as e:
             logging.error(f"Error selecting video link: {e}")
             return f"Failed to play the video"
@@ -490,8 +489,10 @@ class RemoteChrome:
         Called from function call of Open AI
         """
         if(self.youtube_autoplay_thread is not None):
-            self.youtube_autoplay_thread.cancel()
-            self.youtube_autoplay_thread = None
+            logging.info(f" self.youtube_autoplay_thread.play_next_video()")
+            self.youtube_autoplay_thread.play_next_video()
+            num = self.youtube_autoplay_thread.playnumber
+            return f"プレイリストの{num}番目の動画{self.playlist['list'][num]['title']}を再生します"
 
         url = self.get_current_url()
         logging.info(f"url = {url}")
@@ -507,8 +508,10 @@ class RemoteChrome:
         Called from function call of Open AI
         """
         if(self.youtube_autoplay_thread is not None):
-            self.youtube_autoplay_thread.cancel()
-            self.youtube_autoplay_thread = None
+            logging.info(f" self.youtube_autoplay_thread.play_previous_video()")
+            self.youtube_autoplay_thread.play_previous_video()
+            num = self.youtube_autoplay_thread.playnumber
+            return f"プレイリストの{num}番目の動画{self.playlist['list'][num]['title']}を再生します"
 
         url = self.get_current_url()
         logging.info(f"url = {url}")
