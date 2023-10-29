@@ -230,9 +230,7 @@ class RemoteChrome:
             logging.info(
                 f"video_list: {json.dumps(self.playlist, indent=2, ensure_ascii=False)}"
             )
-            response = dict(self.playlist)
-            del response["list"]
-            return json.dumps(response, indent=2, ensure_ascii=False)
+            return f"検索結果からプレイリストを作成しました。プレイリストを再生しますか？"
         except Exception as e:
             logging.error(f"Error selecting video link: {e}")
             return f"Failed to get video list."
