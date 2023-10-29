@@ -23,7 +23,7 @@ from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 import config
 
 # from remote_chrome import RemoteTest
-from remote_chrome_androidtablet import RemoteChrome
+from remote_chrome import RemoteChrome
 from remote_intent import intent_googlenavigation
 
 LAUNCHER_HTML="http://192.168.1.59:8080/launcher.html"
