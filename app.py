@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     openai.api_key = config.keys["openai_api_key"]
     remote_chat = SimpleConversationRemoteChat(history=None)
-    
+
     # debug
     chat()
 

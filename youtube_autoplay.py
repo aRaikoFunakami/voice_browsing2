@@ -96,13 +96,13 @@ class YouTube_AutoPlay(threading.Thread):
             logging.error(f"execute_script: {e}")
 
     def play_next_video(self):
-        logging.info(f"num: {self.playnumber}, playlist: {self.playlist}")
+        logging.debug(f"num: {self.playnumber}, playlist: {self.playlist}")
         self.nextprevious_flag = True
         self._play()
         return
 
     def play_previous_video(self):
-        logging.info(f"num: {self.playnumber}, playlist: {self.playlist}")
+        logging.debug(f"num: {self.playnumber}, playlist: {self.playlist}")
         self.nextprevious_flag = True
         self.playnumber -= 2
         self._play()
@@ -123,7 +123,7 @@ class YouTube_AutoPlay(threading.Thread):
             logging.error(f"WebDriverWait: {e}")
 
     def _play(self):
-        logging.info(f"num: {self.playnumber}, playlist: {self.playlist}")
+        logging.debug(f"num: {self.playnumber}, playlist: {self.playlist}")
         try:
             num = self.playnumber
             url = self.playlist["list"][num]["url"]
