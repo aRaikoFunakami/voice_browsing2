@@ -31,7 +31,26 @@ test = None
 lang_id = "ja"
 
 
-# アプリに戻る
+# Weather
+from openai_function_weather import get_weather_info
+class WeatherInfoInput(BaseModel):
+    latitude: float = Field(descption="latitude")
+    longitude: float = Field(descption="longitude")
+
+
+class WeatherInfo(BaseTool):
+    name = "get_weather_info"
+    description = "This is useful when you want to know the weather forecast. Enter longitude in the latitude field and latitude in the longitude field."
+    args_schema: Type[BaseModel] = WeatherInfoInput
+
+    def _run(self, latitude: float, longitude: float):
+        logging.info(f"get_weather_info(latitude, longitude)")
+        return get_weather_info(latitude, longitude)
+
+    def _arun(self, ticker: str):
+        raise NotImplementedError("not support async")
+
+# Launch Application or Change Application
 class LaunchAppInput(BaseModel):
     application: str = Field(descption="Specify the application.")
 
@@ -342,6 +361,7 @@ class ChainStreamHandler(StreamingStdOutCallbackHandler):
 
 class SimpleConversationRemoteChat:
     tools = [
+        WeatherInfo(),
         LaunchApp(),
         LaunchNavigation(),
         PlayVideoInPlaylist(),
@@ -371,6 +391,7 @@ class SimpleConversationRemoteChat:
 	- If you don't know, say you don't know.
 	- Do not lie.
 	- Minimal talk, no superfluous words.
+    - When responding to the weather, mention sensory information such as whether it is hot or chilly like a weather announcer, and respond in short sentences with the date, time, and miscellaneous information about the weather or location.
 	## Function Call
 	- Use function call in the following cases
 	-- Searching for videos
