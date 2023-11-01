@@ -39,12 +39,16 @@ $ cp config_sample.py config.py
 ```
 
 Please replace `<YOUR OPENAI ID>` by your OpenAI ID in config.py.
+Please replace `<YOUR IP ADDRESS>` by your PC's IP ADDRESS.
 
 ```text:config.py
 keys = {
     "openai_api_key": "<YOUR OPENAI ID>",
+    "launcher": "http://<YOUR IP ADDRESS>:8080/launcher.html",
 }
 ```
+
+Chrome running on Android Tablet will load the dummy launcher UI with "http://\<YOUR IP ADDRESS\>:8080/launcher.html"
 
 
 ## Connect to the Android Device

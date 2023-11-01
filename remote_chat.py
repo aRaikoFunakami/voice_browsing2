@@ -25,8 +25,8 @@ import config
 from remote_chrome import RemoteChrome
 from remote_intent import intent_googlenavigation, intent_application, intent_chrome, intent_googlemap
 
-LAUNCHER_HTML = "http://192.168.1.59:8080/launcher.html"
-model_name = "gpt-3.5-turbo-0613"
+LAUNCHER_HTML = config.keys["launcher"]
+model_name = config.keys["model_name"]
 test = None
 lang_id = "ja"
 
@@ -407,6 +407,7 @@ class SimpleConversationRemoteChat:
 		"Yahoo" : "https://www.yahoo.co.jp/",
 		"YouTube" : "https://www.youtube.com/",
 	}
+    Respond in the same language as the input text
 	"""
 
     def __init__(self, history):
