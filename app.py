@@ -6,9 +6,15 @@ import threading
 import config
 from remote_chat import SimpleConversationRemoteChat
 
+language = 'ja-JP'
 openai.api_key = "YOUR_API_KEY"
 app = Flask(__name__, static_folder="./templates", static_url_path="")
 
+@app.route("/set", methods=["GET"])
+def set_language():
+    global language
+    language = request.args.get('language')
+    return language
 
 @app.route("/upload-audio", methods=["POST"])
 def upload_audio():
@@ -19,10 +25,11 @@ def upload_audio():
         ) as temp_file:
             temp_file.write(audio_data)
             with open(temp_file.name, "rb") as temp_read_file:
-                response = openai.Audio.transcribe("whisper-1", temp_read_file)
+                response = openai.Audio.transcribe("whisper-1", temp_read_file, language=language)
+                #response = openai.Audio.transcribe("whisper-1", temp_read_file)
 
         transcription = response["text"]
-        logging.info(f"transcription {transcription}")
+        logging.info(f"transcription {transcription}, language: {language}")
         global remote_chat
         response = remote_chat.llm_run(transcription)
         return jsonify({"transcription": transcription,

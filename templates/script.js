@@ -69,8 +69,9 @@ toggleButton.addEventListener('click', async () => {
 
             utterance.lang = language;
             if (language == 'en-US') {
-                utterance.voice = voices[145]; // en-US:Google US English Female
-                utterance.rate = 0.9;
+                //utterance.voice = voices[145]; // en-US:Google US English Female
+                utterance.voice = voices.find(voice => voice.name === 'Google UK English Female');
+                utterance.rate = 1.0;
                 this.delimiter = this.delimitersDefault;
             } else if (language == 'zh-CN') {
                 utterance.voice = voices[169]; // zh-CN: Google 普通話
@@ -114,17 +115,25 @@ window.addEventListener('DOMContentLoaded', (event) => {
         }
         else if (e.code === 'KeyE') {
             language = 'en-US';
+            lang_iso639 = 'en';
         }
         else if (e.code === 'KeyJ') {
             language = 'ja-JP';
+            lang_iso639 = 'ja';
         }
         else if (e.code === 'KeyZ') {
             // https://segakuin.com/html/attribute/lang.html
             language = 'zh-CN';
+            lang_iso639 = 'zh';
         }
         else if (e.code === 'KeyK') {
             language = 'ko-KR';
+            lang_iso639 = 'ko';
         }
         languageDiv.innerHTML = 'lang: '+ language;
+
+        const response = fetch(`/set?language=${lang_iso639}`, {
+            method: 'GET',
+        });
     });
 });
