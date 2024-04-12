@@ -15,7 +15,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import quote
 from youtube_autoplay import YouTube_AutoPlay
 from youtube_adskip import YouTube_Adskip
-import chromedriver_binary
 
 #android_tablet = False
 android_tablet = True
@@ -29,14 +28,14 @@ class RemoteChrome:
         self.playlist_mode = False
         self.youtube_autoplay_thread  = None
         options = webdriver.ChromeOptions()
-        #service = Service(ChromeDriverManager().install())
+        service = Service(ChromeDriverManager().install())
         if android_tablet == True:
             options.add_argument(
                 "--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
             )
             options.add_experimental_option("androidPackage", "com.android.chrome")
             self.driver = webdriver.Chrome(
-                options=options, keep_alive=False
+                service=service, options=options, keep_alive=False
             )
         else:
             # PC
