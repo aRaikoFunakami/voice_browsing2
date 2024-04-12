@@ -10,6 +10,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import quote
 from youtube_autoplay import YouTube_AutoPlay
 from youtube_adskip import YouTube_Adskip
@@ -26,14 +28,14 @@ class RemoteChrome:
         self.playlist_mode = False
         self.youtube_autoplay_thread  = None
         options = webdriver.ChromeOptions()
+        service = Service(ChromeDriverManager().install())
         if android_tablet == True:
-            chromedriver = os.path.abspath("./chromedriver/M118/chromedriver")
             options.add_argument(
-                "--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+                "--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
             )
             options.add_experimental_option("androidPackage", "com.android.chrome")
             self.driver = webdriver.Chrome(
-                service=ChromeService(chromedriver), options=options, keep_alive=False
+                service=service, options=options, keep_alive=False
             )
         else:
             # PC
@@ -534,7 +536,7 @@ if __name__ == "__main__":
     test.start()
     test.search_by_query("https://www.youtube.com", "フリーレン")
     time.sleep(1)
-    test.select_link_by_number(1)
+    test.select_link_by_number(2)
     time.sleep(1)
 
     test.fullscreen()
