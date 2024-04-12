@@ -29,7 +29,7 @@ class RemoteChrome:
         self.playlist_mode = False
         self.youtube_autoplay_thread  = None
         options = webdriver.ChromeOptions()
-        service = Service(ChromeDriverManager().install())
+        #service = Service(ChromeDriverManager().install())
         if android_tablet == True:
             options.add_argument(
                 "--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
