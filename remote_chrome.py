@@ -15,6 +15,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import quote
 from youtube_autoplay import YouTube_AutoPlay
 from youtube_adskip import YouTube_Adskip
+import chromedriver_binary
 
 #android_tablet = False
 android_tablet = True
@@ -35,7 +36,7 @@ class RemoteChrome:
             )
             options.add_experimental_option("androidPackage", "com.android.chrome")
             self.driver = webdriver.Chrome(
-                service=service, options=options, keep_alive=False
+                options=options, keep_alive=False
             )
         else:
             # PC
