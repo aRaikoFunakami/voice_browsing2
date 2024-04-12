@@ -1,3 +1,4 @@
+import os
 import logging
 import time
 import json
@@ -6,38 +7,50 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import quote
 from youtube_autoplay import YouTube_AutoPlay
 from youtube_adskip import YouTube_Adskip
 
-#android_tablet = False
-android_tablet = True
+is_termux = True
+#is_termux = False
+
+is_android_tablet = True
+#is_android_tablet = False
+
 youtube_playlist = True
 
 class RemoteChrome:
     def __init__(self):
-        global android_tablet
+        global is_android_tablet
         self.lang_id = "ja"
         self.playlist = []
         self.playlist_mode = False
         self.youtube_autoplay_thread  = None
         options = webdriver.ChromeOptions()
-        #service = Service(ChromeDriverManager().install())
-        if android_tablet == True:
-            #options.add_argument("--no-sandbox")
-            #options.add_argument("--disable-dev-shm-usage")
+        if(is_termux == False):
+            service = Service(ChromeDriverManager().install())
+        
+        if is_android_tablet == True:
             options.add_argument(
                 "--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
             )
             options.add_experimental_option("androidPackage", "com.android.chrome")
-            self.driver = webdriver.Chrome(
-                options=options, keep_alive=False
-            )
+            if(is_termux == True):
+                self.driver = webdriver.Chrome(
+                    service=service, options=options
+                )
+            else:
+                self.driver = webdriver.Chrome(
+                    options=options
+                )
         else:
             # PC
-            self.driver = webdriver.Chrome(options=options)
+            self.driver = webdriver.Chrome(service, options=options)
         #youtube AdSkip thread
         self.youtube_adskip_thread = YouTube_Adskip(driver=self.driver)
         self.youtube_adskip_thread.start()
