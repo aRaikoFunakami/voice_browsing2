@@ -1,4 +1,3 @@
-import os
 import logging
 import time
 import json
@@ -7,11 +6,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import quote
 from youtube_autoplay import YouTube_AutoPlay
 from youtube_adskip import YouTube_Adskip
@@ -30,8 +26,8 @@ class RemoteChrome:
         options = webdriver.ChromeOptions()
         #service = Service(ChromeDriverManager().install())
         if android_tablet == True:
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
+            #options.add_argument("--no-sandbox")
+            #options.add_argument("--disable-dev-shm-usage")
             options.add_argument(
                 "--user-agent=Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
             )
